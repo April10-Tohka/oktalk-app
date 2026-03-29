@@ -135,24 +135,19 @@ class AiAssistantPage extends StatelessWidget {
               // 返回上一页
             },
           ),
-          const Text(
-            'AI助手',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
+          const Expanded(
+            child: Center(
+              child: const Text(
+                'AI助手',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
-          IconButton(
-            icon: const Icon(
-              Icons.chat_bubble_outline,
-              color: Colors.white,
-              size: 24,
-            ), // 历史对话占位
-            onPressed: () {
-              // 打开或跳转历史对话
-            },
-          ),
+          const SizedBox(width: 48), // IconButton 默认大约 48px
         ],
       ),
     );
