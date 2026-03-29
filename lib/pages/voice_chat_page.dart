@@ -166,6 +166,8 @@ class AiAssistantPage extends StatelessWidget {
         children: [
           _buildIconItem(context, '了解OK', 'assets/images/AboutOK.png'),
           _buildIconItem(context, '智能报告', 'assets/images/AIReport.png'),
+          _buildIconItem(context, '智能规划', 'assets/images/AISchedule.png'),
+          _buildIconItem(context, 'OK衣橱', 'assets/images/closet.png'),
         ],
       ),
     );
@@ -272,35 +274,35 @@ class AiAssistantPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // 底部输入/语音唤醒条区
-                Container(
-                  height: 56.92,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.71),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // 左侧语音图标
-                      const Icon(Icons.mic, color: Color(0xFF0B3D03), size: 28),
-                      // 右侧键盘按钮
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF0B3D03),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.grid_view_sharp,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                // // 底部输入/语音唤醒条区
+                // Container(
+                //   height: 56.92,
+                //   decoration: BoxDecoration(
+                //     color: Colors.white.withOpacity(0.71),
+                //     borderRadius: BorderRadius.circular(20),
+                //   ),
+                //   padding: const EdgeInsets.symmetric(horizontal: 16),
+                //   child: Row(
+                //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                //     children: [
+                //       // 左侧语音图标
+                //       const Icon(Icons.mic, color: Color(0xFF0B3D03), size: 28),
+                //       // 右侧键盘按钮
+                //       Container(
+                //         padding: const EdgeInsets.all(6),
+                //         decoration: const BoxDecoration(
+                //           color: Color(0xFF0B3D03),
+                //           shape: BoxShape.circle,
+                //         ),
+                //         child: const Icon(
+                //           Icons.grid_view_sharp,
+                //           color: Colors.white,
+                //           size: 16,
+                //         ),
+                //       ),
+                //     ],
+                //   ),
+                // ),
               ],
             ),
           ),
