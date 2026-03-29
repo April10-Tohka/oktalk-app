@@ -2,112 +2,141 @@ import 'dart:ui';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-class AiGuidedChatPage extends StatelessWidget {
+// 1. 定义一个简单的数据模型，用来装载消息
+class ChatMessage {
+  final bool isUser;
+  final String message;
+  final String translation;
+  final String avatarUrl;
+
+  ChatMessage({
+    required this.isUser,
+    required this.message,
+    required this.translation,
+    required this.avatarUrl,
+  });
+}
+
+// 2. 将页面改为 StatefulWidget，以便管理列表状态和滚动控制器
+class AiGuidedChatPage extends StatefulWidget {
   const AiGuidedChatPage({super.key});
+
+  @override
+  State<AiGuidedChatPage> createState() => _AiGuidedChatPageState();
+}
+
+class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
+  // 核心：滚动控制器
+  final ScrollController _scrollController = ScrollController();
+
+  // 动态消息列表（初始化放入一些历史聊天记录）
+  final List<ChatMessage> _messages = [
+    ChatMessage(
+      isUser: false,
+      message: "Hello! How are you today?",
+      translation: "你好！你今天过得怎么样？",
+      avatarUrl:
+          'https://lh3.googleusercontent.com/aida-public/AB6AXuBxO0JZA5GxGgzW8WQNz1ntF9xNUg9_SB64QKAXzuxW0ZchX_TLh1THmqKRtX3K1zuP1OOSOXC8bWI9SHefKSi1HYTbixRgPrQNHQ8j7ics6LZEJ0JyDu6ryZ8yjR7LIAfnXrtCiTHDRMNoUOQ38e1vt5amVBz2GigluhwRoq6kQcmQ148JhLnAlX8HvlLPvOJrOo5dj2w3_toZ1syQZCqV0dsiuCH1U2TkQPdXy7dd-3b4mi2n2GnNFvjZQ3X_TD0CoNupirRrHwVk',
+    ),
+    ChatMessage(
+      isUser: true,
+      message: "I am fine, thank you!",
+      translation: "我挺好的，谢谢！",
+      avatarUrl:
+          'https://lh3.googleusercontent.com/aida-public/AB6AXuDzs9GykjnkQeNn73Nyj4ObXT07n-PslY-0aswBKdr0kgxpSFu2jgVCGrugGIlY9eSUR5A5gL2w60AR7fEHx3KGZAZiUxth3YwNf5rzftHddfY5xwxrJGVYqNr1zSrFHHyqufPUqq-cxzRNUQYRSxHsTOq_cVqQfhws2zAU9bFjx5O8kSBJ1Cz_VZlVIJtYNuftkZ3fgCdGiUPnhd_nlL8VrNDazdkalBeUX0WofwAYWnSuxMjTxDy3vnWwDec4tN91F_iJgnDHVn6r',
+    ),
+    ChatMessage(
+      isUser: false,
+      message: "That's great! What did you do today?",
+      translation: "太好了！你今天做了什么？",
+      avatarUrl:
+          'https://lh3.googleusercontent.com/aida-public/AB6AXuBnr2qITN-PxhsJpb3ETqKq0t0YDYCiZFhiCvf7WB2f1QlvnxDpCEQskZEM2xvM-LVqhrYICNnFXg4WQkrmjhD6oOHAlISXrNof02vpkqyJrguZSf_D9jUEJz0TtdcGmpaBg2bTjLtYHckJnmhs-aVN6pC7ceUg1YB6NpXiPt-wiH1zHkt9lQkXaEyfnwg9oua6r42j60sKeS59tYeC8zTUzCCGKkMW3KPtIC8tDeATHoUskaiu0lForDXLw4ErnPXshqfqblG3CqAT',
+    ),
+    ChatMessage(
+      isUser: true,
+      message: "I went to school.",
+      translation: "我去上学了。",
+      avatarUrl:
+          'https://lh3.googleusercontent.com/aida-public/AB6AXuAd9KBX1M6TWv1vCNjF_hY96lZjGdAbrhUuKn1mSLSITn0htzFJhpLi9iqvlrQ_IKY_hcx2G6V9xX9oS7QR0PROvg17-8u8h93Ti7jxwFgO2A5DktgZer4gWzicW-oNL6hVePnHUY2hJwnsOW6LXB3_5de03cYIWviTsmUnID3LhdAwRZScV__2fq7EOFXI5_Lk2Lj41I72hPONZNUGJt1yPS9ie77eizkgCU6ezQbNq4KrOx3dO_bX4Np6onZLLCeBcp4Xbj80AiBo',
+    ),
+  ];
+
+  @override
+  void dispose() {
+    _scrollController.dispose(); // 记得释放控制器，防止内存泄漏
+    super.dispose();
+  }
+
+  // 核心功能：丝滑滚动到最底部
+  void _scrollToBottom() {
+    // 延迟到当前帧渲染结束后再执行滚动，确保能获取到最新的列表高度
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent, // 滚动到最大高度
+          duration: const Duration(milliseconds: 300), // 滚动动画时长
+          curve: Curves.easeOut, // 动画曲线，显得更自然
+        );
+      }
+    });
+  }
+
+  // 模拟发送新消息的逻辑
+  void _sendNewMessage(String text, String translation) {
+    setState(() {
+      _messages.add(
+        ChatMessage(
+          isUser: true,
+          message: text,
+          translation: translation,
+          avatarUrl:
+              'https://lh3.googleusercontent.com/aida-public/AB6AXuDzs9GykjnkQeNn73Nyj4ObXT07n-PslY-0aswBKdr0kgxpSFu2jgVCGrugGIlY9eSUR5A5gL2w60AR7fEHx3KGZAZiUxth3YwNf5rzftHddfY5xwxrJGVYqNr1zSrFHHyqufPUqq-cxzRNUQYRSxHsTOq_cVqQfhws2zAU9bFjx5O8kSBJ1Cz_VZlVIJtYNuftkZ3fgCdGiUPnhd_nlL8VrNDazdkalBeUX0WofwAYWnSuxMjTxDy3vnWwDec4tN91F_iJgnDHVn6r',
+        ),
+      );
+    });
+    _scrollToBottom(); // 消息添加后，立即触发滚动到底部
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F8EC), // 浅绿色背景
-      // 1. 顶部导航栏
       appBar: _buildAppBar(context),
-
       body: Stack(
         children: [
-          // 2. 聊天内容区域
-          ListView(
+          // 聊天内容区域
+          ListView.separated(
+            controller: _scrollController, // 绑定控制器！
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 160),
-            children: [
-              _buildAiBubble(
-                context,
-                message: "Hello! How are you today?",
-                translation: "你好！你今天过得怎么样？",
-                avatarUrl:
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuBxO0JZA5GxGgzW8WQNz1ntF9xNUg9_SB64QKAXzuxW0ZchX_TLh1THmqKRtX3K1zuP1OOSOXC8bWI9SHefKSi1HYTbixRgPrQNHQ8j7ics6LZEJ0JyDu6ryZ8yjR7LIAfnXrtCiTHDRMNoUOQ38e1vt5amVBz2GigluhwRoq6kQcmQ148JhLnAlX8HvlLPvOJrOo5dj2w3_toZ1syQZCqV0dsiuCH1U2TkQPdXy7dd-3b4mi2n2GnNFvjZQ3X_TD0CoNupirRrHwVk',
-              ),
-              const SizedBox(height: 24),
-              _buildUserBubble(
-                context,
-                message: "I am fine, thank you!",
-                translation: "我挺好的，谢谢！",
-                avatarUrl:
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuDzs9GykjnkQeNn73Nyj4ObXT07n-PslY-0aswBKdr0kgxpSFu2jgVCGrugGIlY9eSUR5A5gL2w60AR7fEHx3KGZAZiUxth3YwNf5rzftHddfY5xwxrJGVYqNr1zSrFHHyqufPUqq-cxzRNUQYRSxHsTOq_cVqQfhws2zAU9bFjx5O8kSBJ1Cz_VZlVIJtYNuftkZ3fgCdGiUPnhd_nlL8VrNDazdkalBeUX0WofwAYWnSuxMjTxDy3vnWwDec4tN91F_iJgnDHVn6r',
-              ),
-              const SizedBox(height: 24),
-              _buildAiBubble(
-                context,
-                message: "That's great! What did you do today?",
-                translation: "太好了！你今天做了什么？",
-                avatarUrl:
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuBnr2qITN-PxhsJpb3ETqKq0t0YDYCiZFhiCvf7WB2f1QlvnxDpCEQskZEM2xvM-LVqhrYICNnFXg4WQkrmjhD6oOHAlISXrNof02vpkqyJrguZSf_D9jUEJz0TtdcGmpaBg2bTjLtYHckJnmhs-aVN6pC7ceUg1YB6NpXiPt-wiH1zHkt9lQkXaEyfnwg9oua6r42j60sKeS59tYeC8zTUzCCGKkMW3KPtIC8tDeATHoUskaiu0lForDXLw4ErnPXshqfqblG3CqAT',
-              ),
-              const SizedBox(height: 24),
-              _buildUserBubble(
-                context,
-                message: "I went to school.",
-                translation: "我去上学了。",
-                avatarUrl:
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuAd9KBX1M6TWv1vCNjF_hY96lZjGdAbrhUuKn1mSLSITn0htzFJhpLi9iqvlrQ_IKY_hcx2G6V9xX9oS7QR0PROvg17-8u8h93Ti7jxwFgO2A5DktgZer4gWzicW-oNL6hVePnHUY2hJwnsOW6LXB3_5de03cYIWviTsmUnID3LhdAwRZScV__2fq7EOFXI5_Lk2Lj41I72hPONZNUGJt1yPS9ie77eizkgCU6ezQbNq4KrOx3dO_bX4Np6onZLLCeBcp4Xbj80AiBo',
-              ),
-              const SizedBox(height: 24),
-              _buildAiBubble(
-                context,
-                message: "That's great! What did you do today?",
-                translation: "太好了！你今天做了什么？",
-                avatarUrl:
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuBnr2qITN-PxhsJpb3ETqKq0t0YDYCiZFhiCvf7WB2f1QlvnxDpCEQskZEM2xvM-LVqhrYICNnFXg4WQkrmjhD6oOHAlISXrNof02vpkqyJrguZSf_D9jUEJz0TtdcGmpaBg2bTjLtYHckJnmhs-aVN6pC7ceUg1YB6NpXiPt-wiH1zHkt9lQkXaEyfnwg9oua6r42j60sKeS59tYeC8zTUzCCGKkMW3KPtIC8tDeATHoUskaiu0lForDXLw4ErnPXshqfqblG3CqAT',
-              ),
-              const SizedBox(height: 24),
-              _buildUserBubble(
-                context,
-                message: "I went to school.",
-                translation: "我去上学了。",
-                avatarUrl:
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuAd9KBX1M6TWv1vCNjF_hY96lZjGdAbrhUuKn1mSLSITn0htzFJhpLi9iqvlrQ_IKY_hcx2G6V9xX9oS7QR0PROvg17-8u8h93Ti7jxwFgO2A5DktgZer4gWzicW-oNL6hVePnHUY2hJwnsOW6LXB3_5de03cYIWviTsmUnID3LhdAwRZScV__2fq7EOFXI5_Lk2Lj41I72hPONZNUGJt1yPS9ie77eizkgCU6ezQbNq4KrOx3dO_bX4Np6onZLLCeBcp4Xbj80AiBo',
-              ),
-              const SizedBox(height: 24),
-              _buildAiBubble(
-                context,
-                message: "That's great! What did you do today?",
-                translation: "太好了！你今天做了什么？",
-                avatarUrl:
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuBnr2qITN-PxhsJpb3ETqKq0t0YDYCiZFhiCvf7WB2f1QlvnxDpCEQskZEM2xvM-LVqhrYICNnFXg4WQkrmjhD6oOHAlISXrNof02vpkqyJrguZSf_D9jUEJz0TtdcGmpaBg2bTjLtYHckJnmhs-aVN6pC7ceUg1YB6NpXiPt-wiH1zHkt9lQkXaEyfnwg9oua6r42j60sKeS59tYeC8zTUzCCGKkMW3KPtIC8tDeATHoUskaiu0lForDXLw4ErnPXshqfqblG3CqAT',
-              ),
-              const SizedBox(height: 24),
-              _buildUserBubble(
-                context,
-                message: "I went to school.",
-                translation: "我去上学了。",
-                avatarUrl:
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuAd9KBX1M6TWv1vCNjF_hY96lZjGdAbrhUuKn1mSLSITn0htzFJhpLi9iqvlrQ_IKY_hcx2G6V9xX9oS7QR0PROvg17-8u8h93Ti7jxwFgO2A5DktgZer4gWzicW-oNL6hVePnHUY2hJwnsOW6LXB3_5de03cYIWviTsmUnID3LhdAwRZScV__2fq7EOFXI5_Lk2Lj41I72hPONZNUGJt1yPS9ie77eizkgCU6ezQbNq4KrOx3dO_bX4Np6onZLLCeBcp4Xbj80AiBo',
-              ),
-              const SizedBox(height: 24),
-              _buildAiBubble(
-                context,
-                message: "That's great! What did you do today?",
-                translation: "太好了！你今天做了什么？",
-                avatarUrl:
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuBnr2qITN-PxhsJpb3ETqKq0t0YDYCiZFhiCvf7WB2f1QlvnxDpCEQskZEM2xvM-LVqhrYICNnFXg4WQkrmjhD6oOHAlISXrNof02vpkqyJrguZSf_D9jUEJz0TtdcGmpaBg2bTjLtYHckJnmhs-aVN6pC7ceUg1YB6NpXiPt-wiH1zHkt9lQkXaEyfnwg9oua6r42j60sKeS59tYeC8zTUzCCGKkMW3KPtIC8tDeATHoUskaiu0lForDXLw4ErnPXshqfqblG3CqAT',
-              ),
-              const SizedBox(height: 24),
-              _buildUserBubble(
-                context,
-                message: "I went to school.",
-                translation: "我去上学了。",
-                avatarUrl:
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuAd9KBX1M6TWv1vCNjF_hY96lZjGdAbrhUuKn1mSLSITn0htzFJhpLi9iqvlrQ_IKY_hcx2G6V9xX9oS7QR0PROvg17-8u8h93Ti7jxwFgO2A5DktgZer4gWzicW-oNL6hVePnHUY2hJwnsOW6LXB3_5de03cYIWviTsmUnID3LhdAwRZScV__2fq7EOFXI5_Lk2Lj41I72hPONZNUGJt1yPS9ie77eizkgCU6ezQbNq4KrOx3dO_bX4Np6onZLLCeBcp4Xbj80AiBo',
-              ),
-            ],
+            itemCount: _messages.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 24),
+            itemBuilder: (context, index) {
+              final msg = _messages[index];
+              if (msg.isUser) {
+                return _buildUserBubble(
+                  context,
+                  message: msg.message,
+                  translation: msg.translation,
+                  avatarUrl: msg.avatarUrl,
+                );
+              } else {
+                return _buildAiBubble(
+                  context,
+                  message: msg.message,
+                  translation: msg.translation,
+                  avatarUrl: msg.avatarUrl,
+                );
+              }
+            },
           ),
-
-          // 3. 底部录音区域
+          // 底部录音区域
           _buildBottomActionArea(),
         ],
       ),
     );
   }
 
-  // 顶部导航栏
+  // 顶部导航栏 (保持不变)
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
       backgroundColor: Colors.white,
@@ -139,7 +168,7 @@ class AiGuidedChatPage extends StatelessWidget {
     );
   }
 
-  // AI 对话气泡
+  // AI 对话气泡 (略微调整了喇叭的位置对齐)
   Widget _buildAiBubble(
     BuildContext context, {
     required String message,
@@ -170,14 +199,14 @@ class AiGuidedChatPage extends StatelessWidget {
                 ),
               ],
             ),
-            child: Row(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
                         message,
                         style: const TextStyle(
                           fontSize: 16,
@@ -185,20 +214,21 @@ class AiGuidedChatPage extends StatelessWidget {
                           color: Colors.black,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        translation,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black.withOpacity(0.5),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.volume_up,
+                      color: const Color(0xFF3D6620).withOpacity(0.6),
+                    ),
+                  ],
                 ),
-                Icon(
-                  Icons.volume_up,
-                  color: const Color(0xFF3D6620).withOpacity(0.6),
+                const SizedBox(height: 4),
+                Text(
+                  translation,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black.withOpacity(0.5),
+                  ),
                 ),
               ],
             ),
@@ -209,7 +239,7 @@ class AiGuidedChatPage extends StatelessWidget {
     );
   }
 
-  // 用户对话气泡
+  // 用户对话气泡 (略微调整了喇叭的位置对齐)
   Widget _buildUserBubble(
     BuildContext context, {
     required String message,
@@ -236,19 +266,19 @@ class AiGuidedChatPage extends StatelessWidget {
                 bottomRight: Radius.circular(20),
               ),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Icon(
-                  Icons.volume_up,
-                  color: const Color(0xFF1A3D2B).withOpacity(0.6),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.volume_up,
+                      color: const Color(0xFF1A3D2B).withOpacity(0.6),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
                         message,
                         textAlign: TextAlign.right,
                         style: const TextStyle(
@@ -257,16 +287,16 @@ class AiGuidedChatPage extends StatelessWidget {
                           color: Color(0xFF1A3D2B),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        translation,
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: const Color(0xFF1A3D2B).withOpacity(0.6),
-                        ),
-                      ),
-                    ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  translation,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: const Color(0xFF1A3D2B).withOpacity(0.6),
                   ),
                 ),
               ],
@@ -279,7 +309,7 @@ class AiGuidedChatPage extends StatelessWidget {
     );
   }
 
-  // 头像组件
+  // 头像组件 (保持不变)
   Widget _buildAvatar(String url, Color borderColor) {
     return Container(
       width: 48,
@@ -295,7 +325,15 @@ class AiGuidedChatPage extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipOval(child: Image.network(url, fit: BoxFit.cover)),
+      child: ClipOval(
+        // 这里为了防报错加了 errorBuilder，你可以替换成真实的默认头像
+        child: Image.network(
+          url,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) =>
+              Icon(Icons.person, color: borderColor),
+        ),
+      ),
     );
   }
 
@@ -304,11 +342,11 @@ class AiGuidedChatPage extends StatelessWidget {
     return VoiceRecordButton(
       onRecordStart: () {
         print('UI 触发：开始录制音频流...');
-        // TODO: 在这里调用你真实的 WebSocket 音频采集逻辑
       },
       onRecordStop: () {
         print('UI 触发：停止录音并发送结束信号...');
-        // TODO: 在这里处理录音结束逻辑
+        // 测试：模拟录音结束后发送了一条新消息
+        _sendNewMessage("I want to play games.", "我想玩游戏。");
       },
     );
   }
