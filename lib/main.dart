@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'pages/voice_chat_page.dart';
+import 'pages/ai_home_page.dart';
+
 void main() {
   runApp(const MyApp());
 }
@@ -20,4 +21,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
