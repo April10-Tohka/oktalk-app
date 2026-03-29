@@ -1,0 +1,111 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+
+
+# ==========================================
+# Flutter 通用忽略
+# ==========================================
+
+# 构建输出
+/build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+# IDE 配置（个人环境，不共享）
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# 测试相关
+/test/widget_test.dart
+
+# ==========================================
+# Android 平台忽略
+# ==========================================
+
+# Gradle 相关
+android/.gradle/
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/app/build/
+android/gradle/wrapper/gradle-wrapper.jar
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/key.properties
+android/*.jks
+android/*.keystore
+
+# 自动生成的文件
+android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
+# ==========================================
+# iOS / macOS / Linux / Windows 平台（完全忽略）
+# ==========================================
+
+/ios/
+/macos/
+/linux/
+/windows/
+
+# ==========================================
+# Web 平台（保留核心配置）
+# ==========================================
+
+# 可以保留，通常需要提交
+# /web/
+
+# 如果 web 有构建输出，忽略
+/web/.dart_tool/
+/web/build/
