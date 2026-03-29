@@ -67,30 +67,33 @@ class AiAssistantPage extends StatelessWidget {
 
                 // 中间的3D龙宝占位符区
                 Expanded(
-                  child: Center(
-                    child: Container(
-                      width: 284,
-                      height: 284,
-                      decoration: BoxDecoration(
-                        color: Colors.white24, // 占位底色
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.25),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // 获取可用高度，计算合适的尺寸
+                      final availableHeight = constraints.maxHeight;
+                      final availableWidth = constraints.maxWidth;
+
+                      // 取宽高中较小值的 65% 作为容器尺寸，确保不溢出
+                      // 同时限制最小 200、最大 320，避免极端情况
+                      final containerSize = (availableHeight * 0.65).clamp(
+                        200.0,
+                        320.0,
+                      );
+                      return Center(
+                        child: Container(
+                          width: containerSize,
+                          height: containerSize,
+                          child: Center(
+                            child: Image.asset(
+                              'assets/images/3Ddragon.png', // 替换成你真实的龙宝图片名称
+                              width: containerSize * 0.95,
+                              height: containerSize * 0.95,
+                              fit: BoxFit.contain,
+                            ),
                           ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Image.asset(
-                          'assets/images/3Ddragon.png', // 替换成你真实的龙宝图片名称
-                          width: 200, // 根据你的设计图调整尺寸
-                          height: 200,
-                          fit: BoxFit.contain,
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ),
 
@@ -163,8 +166,6 @@ class AiAssistantPage extends StatelessWidget {
         children: [
           _buildIconItem(context, '了解OK', 'assets/images/AboutOK.png'),
           _buildIconItem(context, '智能报告', 'assets/images/AIReport.png'),
-          _buildIconItem(context, '智能规划', 'assets/images/AISchedule.png'),
-          _buildIconItem(context, 'OK衣橱', 'assets/images/AISchedule.png'),
         ],
       ),
     );
