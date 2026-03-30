@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.green,
         scaffoldBackgroundColor: const Color(0xFFE8F5E9),
       ),
-      home: const AiAssistantPage(),
+      home: const AiHomePage(),
     );
   }
 }

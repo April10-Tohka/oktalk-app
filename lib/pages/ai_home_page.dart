@@ -4,8 +4,8 @@ import 'ai_chat_page.dart';
 import 'smart_report_page.dart';
 import 'free_talk_page.dart';
 
-class AiAssistantPage extends StatelessWidget {
-  const AiAssistantPage({Key? key}) : super(key: key);
+class AiHomePage extends StatelessWidget {
+  const AiHomePage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
