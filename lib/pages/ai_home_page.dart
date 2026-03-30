@@ -262,13 +262,13 @@ class AiAssistantPage extends StatelessWidget {
                     children: [
                       _buildTagButton(
                         context,
-                        '自由说',
+                        '模拟场景对话',
                         const Color.fromRGBO(255, 185, 35, 0.54),
                       ),
                       const SizedBox(width: 8),
                       _buildTagButton(context, 'AI纠音', const Color(0xFF93D020)),
                       const SizedBox(width: 8),
-                      _buildTagButton(context, '一句一句', const Color(0xFF93D020)),
+                      _buildTagButton(context, '学习对话', const Color(0xFF93D020)),
                     ],
                   ),
                 ),
