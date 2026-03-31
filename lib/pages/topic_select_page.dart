@@ -1,8 +1,78 @@
 import 'dart:ui';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 
-class TopicSelectPage extends StatelessWidget {
-  const TopicSelectPage({super.key});
+class TopicSelectPage extends StatefulWidget {
+  final String type;
+
+  const TopicSelectPage({super.key, required this.type});
+
+  @override
+  State<TopicSelectPage> createState() => _TopicSelectPageState();
+}
+
+class _TopicSelectPageState extends State<TopicSelectPage> {
+  bool _isLoading = true;
+  List<dynamic> _topicList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTopics();
+  }
+
+  Future<void> _fetchTopics() async {
+    // 这里模拟从后端获取数据，实际开发中请使用 http 库请求真实接口:
+    // final response = await http.get(Uri.parse('https://your_domain/api/v1/pronunciation/units?type=${widget.type}'));
+
+    await Future.delayed(const Duration(milliseconds: 800)); // 模拟网络延迟加载效果
+
+    // 根据传入的 type 构造对应 Mock 数据
+    final titleSuffix = widget.type == 'word' ? 'Words' : 'Sentences';
+    final String mockResponse =
+        '''
+    {
+        "code": 200,
+        "message": "success",
+        "data": [
+            {
+                "id": "${widget.type}_animals",
+                "type": "${widget.type}",
+                "topic": "animals",
+                "title": "Animal $titleSuffix",
+                "cover_emoji": "🐶",
+                "total_items": 3
+            },
+            {
+                "id": "${widget.type}_food",
+                "type": "${widget.type}",
+                "topic": "food",
+                "title": "Food $titleSuffix",
+                "cover_emoji": "🍗",
+                "total_items": 3
+            },
+            {
+                "id": "${widget.type}_fruits",
+                "type": "${widget.type}",
+                "topic": "fruits",
+                "title": "Fruit $titleSuffix",
+                "cover_emoji": "🍎",
+                "total_items": 3
+            }
+        ]
+    }
+    ''';
+
+    if (mounted) {
+      final decoded = jsonDecode(mockResponse);
+      if (decoded['code'] == 200) {
+        setState(() {
+          _topicList = decoded['data'];
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,28 +127,36 @@ class TopicSelectPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 32),
 
-                      // 4. 话题网格 (2列)
-                      GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 16,
-                        childAspectRatio: 1.0, // 正方形卡片
-                        children: [
-                          _buildTopicCard('👋', 'Greeting'),
-                          _buildTopicCard('☀️', 'Daily Talk'),
-                          _buildTopicCard('🍽️', 'Food Order'),
-                          _buildTopicCard('✈️', 'Travel'),
-                          _buildTopicCard('🛍️', 'Shopping'),
-                          _buildTopicCard('🏥', 'Health'),
-                        ],
-                      ),
+                      // 4. 话题网格展示，如果正在加载则显示进度条
+                      _isLoading
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(40.0),
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFFFDC003),
+                                ),
+                              ),
+                            )
+                          : GridView.count(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 16,
+                              crossAxisSpacing: 16,
+                              childAspectRatio: 1.0, // 正方形卡片
+                              children: _topicList.map((item) {
+                                // 将每个item通过对应的id, topic, cover_emoji等绑定去渲染
+                                return _buildTopicCard(
+                                  id: item['id'] ?? '',
+                                  emoji: item['cover_emoji'] ?? '✨',
+                                  label: item['title'] ?? item['topic'] ?? '',
+                                );
+                              }).toList(),
+                            ),
 
                       const SizedBox(height: 32),
 
-                      // 5. 挑战横幅 (吉祥物)
-                      // TODO: 看情况要不要
+                      // 5. 挑战横幅
                       _buildChallengeBanner(),
 
                       const SizedBox(height: 120), // 为底部导航留出空间
@@ -110,9 +188,9 @@ class TopicSelectPage extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          const Text(
-            '单词练习',
-            style: TextStyle(
+          Text(
+            widget.type == 'word' ? '单词练习' : '句子练习',
+            style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -124,31 +202,42 @@ class TopicSelectPage extends StatelessWidget {
   }
 
   // 话题卡片组件 (毛玻璃效果)
-  Widget _buildTopicCard(String emoji, String label) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 48)),
-              const SizedBox(height: 12),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+  Widget _buildTopicCard({
+    required String id,
+    required String emoji,
+    required String label,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        // TODO: 这里触发了某个具体的主题练习跳转。可以加上你的路由跳转逻辑
+        debugPrint('Clicked Topic Card: $id');
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 48)),
+                const SizedBox(height: 12),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

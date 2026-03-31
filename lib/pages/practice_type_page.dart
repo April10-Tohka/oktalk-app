@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'topic_select_page.dart';
 
 class PracticeTypeScreen extends StatelessWidget {
   const PracticeTypeScreen({super.key});
@@ -58,12 +59,17 @@ class PracticeTypeScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 40),
 
-                        // 4. 练习选项卡片
                         _buildPracticeCard(
                           icon: '📝',
                           title: '单词练习',
                           subtitle: 'Practice individual words',
                           iconBgColor: Colors.amber.withOpacity(0.2),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const TopicSelectPage(type: 'word')),
+                            );
+                          },
                         ),
                         const SizedBox(height: 20),
                         _buildPracticeCard(
@@ -71,6 +77,12 @@ class PracticeTypeScreen extends StatelessWidget {
                           title: '句子练习',
                           subtitle: 'Practice full sentences',
                           iconBgColor: Colors.green.withOpacity(0.2),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const TopicSelectPage(type: 'sentence')),
+                            );
+                          },
                         ),
 
                         // 5. AI Tutor 插图
@@ -152,54 +164,58 @@ class PracticeTypeScreen extends StatelessWidget {
     required String title,
     required String subtitle,
     required Color iconBgColor,
+    required VoidCallback onTap,
   }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(32),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-            borderRadius: BorderRadius.circular(32),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: iconBgColor,
-                  borderRadius: BorderRadius.circular(16),
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              borderRadius: BorderRadius.circular(32),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: iconBgColor,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(icon, style: const TextStyle(fontSize: 30)),
                 ),
-                alignment: Alignment.center,
-                child: Text(icon, style: const TextStyle(fontSize: 30)),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white.withOpacity(0.5),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.5),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Icon(Icons.chevron_right, color: Colors.white.withOpacity(0.3)),
-            ],
+                Icon(Icons.chevron_right, color: Colors.white.withOpacity(0.3)),
+              ],
+            ),
           ),
         ),
       ),
