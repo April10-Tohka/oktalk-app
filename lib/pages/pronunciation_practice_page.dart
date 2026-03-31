@@ -1,8 +1,213 @@
 import 'dart:ui';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:record/record.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
 
-class PronunciationPracticePage extends StatelessWidget {
+var testAudioUrl =
+    'https://oktalk.oss-cn-heyuan.aliyuncs.com/scene/0420b0b4-9167-47f5-8a42-3a91c53539a8/ai_50103999-f8a5-4a69-93e9-b3bd4350afa4.wav';
+
+class PronunciationPracticePage extends StatefulWidget {
   const PronunciationPracticePage({super.key});
+
+  @override
+  State<PronunciationPracticePage> createState() =>
+      _PronunciationPracticePageState();
+}
+
+class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
+  // 核心对象
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
+  // 状态变量
+  bool _isRecording = false;
+  bool _isPlayingStandard = false;
+  bool _isPlayingMyAudio = false;
+
+  // Mock 的测试数据
+  final String _standardAudioUrl = testAudioUrl; // 替换为真实的 OSS 标准读音URL
+
+  // 接口返回的数据
+  bool _hasResult = false;
+  int _stars = 0;
+  String _correctionHint = '';
+  String _myAudioUrl = '';
+  String? _recordedFilePath;
+
+  @override
+  void initState() {
+    super.initState();
+    // 监听播放完成事件以重置播放状态
+    _audioPlayer.onPlayerComplete.listen((_) {
+      if (mounted) {
+        setState(() {
+          _isPlayingStandard = false;
+          _isPlayingMyAudio = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _audioRecorder.dispose();
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  // ==== 播放控制 ====
+
+  // 播放标准读音
+  Future<void> _playStandardAudio() async {
+    if (_isPlayingStandard) {
+      await _audioPlayer.stop();
+      setState(() => _isPlayingStandard = false);
+      return;
+    }
+
+    // 如果正在播放我的录音，先停止
+    if (_isPlayingMyAudio) {
+      await _audioPlayer.stop();
+      setState(() => _isPlayingMyAudio = false);
+    }
+
+    setState(() => _isPlayingStandard = true);
+    await _audioPlayer.play(UrlSource(_standardAudioUrl));
+  }
+
+  // 播放我的录音
+  Future<void> _playMyAudio() async {
+    if (_myAudioUrl.isEmpty) return;
+
+    if (_isPlayingMyAudio) {
+      await _audioPlayer.stop();
+      setState(() => _isPlayingMyAudio = false);
+      return;
+    }
+
+    // 如果正在播放标准读音，先停止
+    if (_isPlayingStandard) {
+      await _audioPlayer.stop();
+      setState(() => _isPlayingStandard = false);
+    }
+
+    setState(() => _isPlayingMyAudio = true);
+    await _audioPlayer.play(UrlSource(_myAudioUrl));
+  }
+
+  // ==== 录音控制 ====
+
+  Future<void> _startRecording() async {
+    print("开始录音");
+    // 动态申请麦克风权限
+    var status = await Permission.microphone.status;
+    if (!status.isGranted) {
+      status = await Permission.microphone.request();
+      if (status.isPermanentlyDenied) {
+        // 跳转设置页
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('请在系统设置中允许麦克风权限'),
+              action: SnackBarAction(
+                label: '去设置',
+                onPressed: () => openAppSettings(),
+              ),
+            ),
+          );
+        }
+        return;
+      }
+      if (!status.isGranted) {
+        return;
+      }
+    }
+
+    // 检查是否有足够的设备支持
+    if (!await _audioRecorder.hasPermission()) return;
+
+    try {
+      // 构造临时录音文件路径
+      final Directory tempDir = await getTemporaryDirectory();
+      final String filePath =
+          '${tempDir.path}/practice_record_${DateTime.now().millisecondsSinceEpoch}.wav';
+      _recordedFilePath = filePath;
+
+      // 按照规定：采样率16k、位长16bit、单声道，PCM 格式 (用 pcm16bits 编码保存)
+      await _audioRecorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.pcm16bits,
+          bitRate: 256000,
+          sampleRate: 16000,
+          numChannels: 1,
+        ),
+        path: filePath,
+      );
+
+      setState(() {
+        _isRecording = true;
+        _hasResult = false; // 按下录音时重置状态
+      });
+    } catch (e) {
+      debugPrint("录音启动失败: $e");
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    print("停止录音");
+    if (!_isRecording) return;
+
+    try {
+      final path = await _audioRecorder.stop();
+      setState(() {
+        _isRecording = false;
+      });
+
+      if (path != null) {
+        // 调用接口 evaluate
+        await _evaluate(path);
+      }
+    } catch (e) {
+      debugPrint("录音停止失败: $e");
+    }
+  }
+
+  // ==== Mock Evaluate API ====
+
+  Future<void> _evaluate(String filePath) async {
+    // 模拟接口网络请求的加载圈
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFFFDC003)),
+      ),
+    );
+
+    // TODO: 结合实际后端替换为 MultipartRequest
+    // 示例代码补充说明：
+    // var request = http.MultipartRequest('POST', Uri.parse('YOUR_EVALUATE_API_URL'));
+    // request.files.add(await http.MultipartFile.fromPath('audio_file', filePath));
+    // var response = await request.send();
+
+    await Future.delayed(const Duration(seconds: 2)); // 模拟网络耗时
+
+    if (mounted) {
+      Navigator.pop(context); // 关闭加载圈
+
+      // Mock 返回数据
+      setState(() {
+        _hasResult = true;
+        _stars = 3; // 获得了 3 颗星
+        _correctionHint = "注意 'oo' 的发音，嘴型更圆一些";
+        // 假装已经上传到了 OSS 并获得了音频 url
+        _myAudioUrl = testAudioUrl;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,9 +256,7 @@ class PronunciationPracticePage extends StatelessWidget {
                       const SizedBox(height: 40),
 
                       // 6. 反馈评分区域 (录音后显示)
-                      _buildFeedbackSection(),
-
-                      // const SizedBox(height: 120), // 为底部操作栏留空
+                      if (_hasResult) _buildFeedbackSection(),
                     ],
                   ),
                 ),
@@ -145,20 +348,6 @@ class PronunciationPracticePage extends StatelessWidget {
           ),
           child: Column(
             children: [
-              // Container(
-              //   width: 64,
-              //   height: 64,
-              //   decoration: BoxDecoration(
-              //     color: Colors.white.withOpacity(0.1),
-              //     shape: BoxShape.circle,
-              //   ),
-              //   child: const Icon(
-              //     Icons.headset,
-              //     color: Colors.white70,
-              //     size: 32,
-              //   ),
-              // ),
-              // const SizedBox(height: 24),
               const Text(
                 'Good morning',
                 style: TextStyle(
@@ -179,11 +368,18 @@ class PronunciationPracticePage extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.play_circle_filled, color: Colors.black),
-                label: const Text(
-                  'Play Standard Audio',
-                  style: TextStyle(
+                onPressed: _playStandardAudio, // 点击事件
+                icon: Icon(
+                  _isPlayingStandard
+                      ? Icons.stop_circle_rounded
+                      : Icons.play_circle_filled,
+                  color: Colors.black,
+                ),
+                label: Text(
+                  _isPlayingStandard
+                      ? 'Stop Standard Audio'
+                      : 'Play Standard Audio',
+                  style: const TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.bold,
                   ),
@@ -208,41 +404,59 @@ class PronunciationPracticePage extends StatelessWidget {
   Widget _buildRecordingSection() {
     return Column(
       children: [
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            // 脉冲动画装饰 (静态模拟)
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
-              ),
-            ),
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.3),
-                  width: 4,
+        GestureDetector(
+          onTapDown: (_) => _startRecording(),
+          onTapUp: (_) => _stopRecording(),
+          onTapCancel: () => _stopRecording(),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // 脉冲动画装饰 (长按变大效果控制)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: _isRecording ? 120 : 100,
+                height: _isRecording ? 120 : 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _isRecording
+                      ? Colors.green.withOpacity(0.3)
+                      : Colors.white.withOpacity(0.05),
                 ),
-                color: Colors.white.withOpacity(0.1),
               ),
-              child: const Icon(Icons.mic, color: Colors.white, size: 36),
-            ),
-          ],
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: _isRecording
+                        ? Colors.greenAccent
+                        : Colors.white.withOpacity(0.3),
+                    width: 4,
+                  ),
+                  color: _isRecording
+                      ? Colors.green
+                      : Colors.white.withOpacity(0.1),
+                ),
+                child: Icon(
+                  Icons.mic,
+                  color: _isRecording ? Colors.white : Colors.white70,
+                  size: 36,
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         Text(
-          'TAP TO SPEAK',
+          _isRecording ? 'RECORDING...' : 'HOLD TO SPEAK',
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.5,
-            color: Colors.white.withOpacity(0.6),
+            color: _isRecording
+                ? Colors.greenAccent
+                : Colors.white.withOpacity(0.6),
           ),
         ),
       ],
@@ -260,62 +474,65 @@ class PronunciationPracticePage extends StatelessWidget {
             return Icon(
               Icons.star,
               size: 36,
-              color: index < 4 ? const Color(0xFFFDC003) : Colors.white24,
+              color: index < _stars ? const Color(0xFFFDC003) : Colors.white24,
             );
           }),
         ),
         const SizedBox(height: 24),
         // 纠错提示
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF95630).withOpacity(0.15),
-            border: Border.all(color: const Color(0xFFF95630).withOpacity(0.3)),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                color: Color(0xFFF95630),
-                size: 20,
+        if (_correctionHint.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF95630).withOpacity(0.15),
+              border: Border.all(
+                color: const Color(0xFFF95630).withOpacity(0.3),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: RichText(
-                  text: const TextSpan(
-                    style: TextStyle(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  color: Color(0xFFF95630),
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _correctionHint,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 14,
                       height: 1.5,
                     ),
-                    children: [
-                      TextSpan(text: '注意 '),
-                      TextSpan(
-                        text: "'oo'",
-                        style: TextStyle(
-                          color: Color(0xFFF95630),
-                          fontWeight: FontWeight.bold,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                      TextSpan(text: ' 的发音，嘴型更圆一些'),
-                    ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
         const SizedBox(height: 20),
         // 录音对比行
-        _buildComparisonRow(Icons.volume_up, '我的录音', const Color(0xFFB2E28D)),
+        GestureDetector(
+          onTap: _playMyAudio,
+          child: _buildComparisonRow(
+            Icons.volume_up,
+            '我的录音',
+            const Color(0xFFB2E28D),
+            _isPlayingMyAudio, // 传递播放状态
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildComparisonRow(IconData icon, String label, Color iconColor) {
+  Widget _buildComparisonRow(
+    IconData icon,
+    String label,
+    Color iconColor,
+    bool isPlaying,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
@@ -342,7 +559,11 @@ class PronunciationPracticePage extends StatelessWidget {
               color: Colors.white.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.play_arrow, color: Colors.white, size: 18),
+            child: Icon(
+              isPlaying ? Icons.stop_rounded : Icons.play_arrow,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
         ],
       ),
@@ -366,7 +587,15 @@ class PronunciationPracticePage extends StatelessWidget {
               // 再来一次
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: () {
+                    // 清空之前的状态
+                    setState(() {
+                      _hasResult = false;
+                      _stars = 0;
+                      _correctionHint = '';
+                      _myAudioUrl = '';
+                    });
+                  },
                   icon: const Icon(Icons.replay, size: 18),
                   label: const Text('再试一次'),
                   style: OutlinedButton.styleFrom(
