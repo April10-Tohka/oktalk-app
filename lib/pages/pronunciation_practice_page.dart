@@ -1,10 +1,12 @@
 import 'dart:ui';
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 
 class PronunciationPracticePage extends StatefulWidget {
   final String sessionId;
@@ -34,6 +36,13 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
   bool _isRecording = false;
   bool _isPlayingStandard = false;
   bool _isPlayingMyAudio = false;
+  bool _isPlayingAiAudio = false;
+  bool _isRequesting = false;
+
+  static const String _apiBaseUrl = String.fromEnvironment(
+    'OKTALK_API_BASE_URL',
+    defaultValue: 'http://10.0.2.2:8080',
+  );
 
   // 练习会话核心数据
   late final String _sessionId;
@@ -49,8 +58,10 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
   // 接口返回的数据
   bool _hasResult = false;
   int _stars = 0;
+  int _starAnimSeed = 0;
   String _correctionHint = '';
   String _myAudioUrl = '';
+  String _aiAudioUrl = '';
 
   @override
   void initState() {
@@ -72,6 +83,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
         setState(() {
           _isPlayingStandard = false;
           _isPlayingMyAudio = false;
+          _isPlayingAiAudio = false;
         });
       }
     });
@@ -120,15 +132,41 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
       await _audioPlayer.stop();
       setState(() => _isPlayingStandard = false);
     }
+    if (_isPlayingAiAudio) {
+      await _audioPlayer.stop();
+      setState(() => _isPlayingAiAudio = false);
+    }
 
     setState(() => _isPlayingMyAudio = true);
     await _audioPlayer.play(UrlSource(_myAudioUrl));
   }
 
+  Future<void> _playAiAudio() async {
+    if (_aiAudioUrl.isEmpty) return;
+
+    if (_isPlayingAiAudio) {
+      await _audioPlayer.stop();
+      setState(() => _isPlayingAiAudio = false);
+      return;
+    }
+
+    if (_isPlayingStandard) {
+      await _audioPlayer.stop();
+      setState(() => _isPlayingStandard = false);
+    }
+    if (_isPlayingMyAudio) {
+      await _audioPlayer.stop();
+      setState(() => _isPlayingMyAudio = false);
+    }
+
+    setState(() => _isPlayingAiAudio = true);
+    await _audioPlayer.play(UrlSource(_aiAudioUrl));
+  }
+
   // ==== 录音控制 ====
 
   Future<void> _startRecording() async {
-    print("开始录音");
+    debugPrint("开始录音");
     // 动态申请麦克风权限
     var status = await Permission.microphone.status;
     if (!status.isGranted) {
@@ -162,10 +200,10 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
       final String filePath =
           '${tempDir.path}/practice_record_${DateTime.now().millisecondsSinceEpoch}.wav';
 
-      // 按照规定：采样率16k、位长16bit、单声道，PCM 格式 (用 pcm16bits 编码保存)
+      // 按照规定：采样率16k、位长16bit、单声道， WAV 格式 (用 wav 编码保存)
       await _audioRecorder.start(
         const RecordConfig(
-          encoder: AudioEncoder.pcm16bits,
+          encoder: AudioEncoder.wav,
           bitRate: 256000,
           sampleRate: 16000,
           numChannels: 1,
@@ -183,7 +221,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
   }
 
   Future<void> _stopRecording() async {
-    print("停止录音");
+    debugPrint("停止录音");
     if (!_isRecording) return;
 
     try {
@@ -201,11 +239,12 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
     }
   }
 
-  // ==== Mock Evaluate API ====
-
   Future<void> _evaluate(String filePath) async {
-    debugPrint('evaluate session=$_sessionId file=$filePath');
-    // 模拟接口网络请求的加载圈
+    debugPrint("开始评测");
+    if (_isRequesting) return;
+    setState(() => _isRequesting = true);
+
+    debugPrint("显示加载对话框");
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -214,25 +253,137 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
       ),
     );
 
-    // TODO: 结合实际后端替换为 MultipartRequest
-    // 示例代码补充说明：
-    // var request = http.MultipartRequest('POST', Uri.parse('YOUR_EVALUATE_API_URL'));
-    // request.files.add(await http.MultipartFile.fromPath('audio_file', filePath));
-    // var response = await request.send();
+    debugPrint("调用接口 evaluate");
+    try {
+      final uri = Uri.parse('$_apiBaseUrl/api/v1/pronunciation/evaluate');
+      final req = http.MultipartRequest('POST', uri);
 
-    await Future.delayed(const Duration(seconds: 2)); // 模拟网络耗时
+      req.fields['session_id'] = _sessionId;
+      req.fields['item_id'] = _itemIndex.toString();
+      req.fields['audio_type'] = 'wav';
 
-    if (mounted) {
-      Navigator.pop(context); // 关闭加载圈
+      req.files.add(await http.MultipartFile.fromPath('audio_file', filePath));
 
-      // Mock 返回数据
+      final streamed = await req.send();
+      final body = await streamed.stream.bytesToString();
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+
+      if (decoded['code'] != 200) {
+        throw Exception(decoded['message'] ?? 'evaluate failed');
+      }
+
+      final data = decoded['data'] as Map<String, dynamic>;
+      final evaluation = (data['evaluation'] ?? {}) as Map<String, dynamic>;
+      final aiFeedback = (data['ai_feedback'] ?? {}) as Map<String, dynamic>;
+
+      final stars =
+          int.tryParse((evaluation['stars'] ?? 0).toString())?.clamp(0, 5) ?? 0;
+      final suggestion = (aiFeedback['suggestion'] ?? '').toString();
+      final userAudioUrl = (data['user_audio_url'] ?? '').toString();
+      final aiAudioUrl = (aiFeedback['ai_audio_url'] ?? '').toString();
+
+      if (!mounted) return;
       setState(() {
         _hasResult = true;
-        _stars = 3; // 获得了 3 颗星
-        _correctionHint = "注意 'oo' 的发音，嘴型更圆一些";
-        // 假装已经上传到了 OSS 并获得了音频 url（这里暂时复用标准音频 URL）
-        _myAudioUrl = _standardAudioUrl;
+        _stars = stars;
+        _starAnimSeed++;
+        _correctionHint = suggestion;
+        _myAudioUrl = userAudioUrl;
+        _aiAudioUrl = aiAudioUrl;
       });
+
+      // 评测完成后自动播放 AI 音频
+      await _playAiAudio();
+    } catch (e) {
+      debugPrint("评测失败: $e");
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('评测失败：$e')),
+      );
+    } finally {
+      debugPrint("关闭加载对话框");
+      if (mounted) {
+        Navigator.pop(context);
+        setState(() => _isRequesting = false);
+      }
+    }
+  }
+
+  Future<void> _advanceToNext() async {
+    if (_isRequesting) return;
+    setState(() => _isRequesting = true);
+    try {
+      final uri =
+          Uri.parse('$_apiBaseUrl/api/v1/pronunciation/session/advance');
+      final res = await http.post(
+        uri,
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'session_id': _sessionId,
+          'current_item_id': _itemIndex,
+        }),
+      );
+      final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+      if (decoded['code'] != 200) {
+        throw Exception(decoded['message'] ?? 'advance failed');
+      }
+
+      final data = decoded['data'] as Map<String, dynamic>;
+      final unitCompleted = data['unit_completed'] == true;
+      if (unitCompleted) {
+        if (!mounted) return;
+        await showDialog<void>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('已完成本单元'),
+            content: const Text('做得很好！'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('好的'),
+              ),
+            ],
+          ),
+        );
+        if (mounted) Navigator.pop(context);
+        return;
+      }
+
+      final nextItem = (data['next_item'] ?? {}) as Map<String, dynamic>;
+      final nextContent = (nextItem['content'] ?? '').toString();
+      final nextStandard = (nextItem['standard_audio_url'] ?? '').toString();
+      final nextIndex =
+          int.tryParse((nextItem['item_index'] ?? 0).toString()) ?? _itemIndex;
+      final nextTotal =
+          int.tryParse((nextItem['total_items'] ?? 0).toString()) ?? _totalItems;
+
+      if (!mounted) return;
+      await _audioPlayer.stop();
+      setState(() {
+        _currentItem = nextItem;
+        _content = nextContent;
+        _standardAudioUrl = nextStandard;
+        _itemIndex = nextIndex;
+        _totalItems = nextTotal;
+
+        // 重置评测区域
+        _hasResult = false;
+        _stars = 0;
+        _correctionHint = '';
+        _myAudioUrl = '';
+        _aiAudioUrl = '';
+
+        _isPlayingStandard = false;
+        _isPlayingMyAudio = false;
+        _isPlayingAiAudio = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('获取下一条失败：$e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isRequesting = false);
     }
   }
 
@@ -496,10 +647,26 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(5, (index) {
-            return Icon(
-              Icons.star,
-              size: 36,
-              color: index < _stars ? const Color(0xFFFDC003) : Colors.white24,
+            final enabled = index < _stars;
+            final duration = Duration(milliseconds: 220 + index * 80);
+            return TweenAnimationBuilder<double>(
+              key: ValueKey('star_${_starAnimSeed}_$index'),
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: duration,
+              curve: Curves.easeOutBack,
+              builder: (context, t, _) {
+                final scale = enabled ? (0.85 + 0.25 * t) : 1.0;
+                return Transform.scale(
+                  scale: scale,
+                  child: Icon(
+                    Icons.star,
+                    size: 36,
+                    color: enabled
+                        ? const Color(0xFFFDC003)
+                        : Colors.white24,
+                  ),
+                );
+              },
             );
           }),
         ),
@@ -546,6 +713,16 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
             '我的录音',
             const Color(0xFFB2E28D),
             _isPlayingMyAudio, // 传递播放状态
+          ),
+        ),
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: _playAiAudio,
+          child: _buildComparisonRow(
+            Icons.auto_awesome,
+            'AI 反馈音频',
+            const Color(0xFFFDC003),
+            _isPlayingAiAudio,
           ),
         ),
       ],
@@ -636,7 +813,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
               Expanded(
                 flex: 2,
                 child: ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: _advanceToNext,
                   icon: const Icon(Icons.arrow_forward, size: 18),
                   label: const Text('下一条'),
                   style: ElevatedButton.styleFrom(
