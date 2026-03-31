@@ -1,6 +1,9 @@
 import 'dart:ui';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import 'pronunciation_practice_page.dart';
 
 class TopicSelectPage extends StatefulWidget {
   final String type;
@@ -14,6 +17,12 @@ class TopicSelectPage extends StatefulWidget {
 class _TopicSelectPageState extends State<TopicSelectPage> {
   bool _isLoading = true;
   List<dynamic> _topicList = [];
+  String? _startingUnitId;
+
+  static const String _apiBaseUrl = String.fromEnvironment(
+    'OKTALK_API_BASE_URL',
+    defaultValue: 'http://10.0.2.2:8080',
+  );
 
   @override
   void initState() {
@@ -32,35 +41,35 @@ class _TopicSelectPageState extends State<TopicSelectPage> {
     final String mockResponse =
         '''
     {
-        "code": 200,
-        "message": "success",
-        "data": [
-            {
-                "id": "${widget.type}_animals",
-                "type": "${widget.type}",
-                "topic": "animals",
-                "title": "Animal $titleSuffix",
-                "cover_emoji": "🐶",
-                "total_items": 3
-            },
-            {
-                "id": "${widget.type}_food",
-                "type": "${widget.type}",
-                "topic": "food",
-                "title": "Food $titleSuffix",
-                "cover_emoji": "🍗",
-                "total_items": 3
-            },
-            {
-                "id": "${widget.type}_fruits",
-                "type": "${widget.type}",
-                "topic": "fruits",
-                "title": "Fruit $titleSuffix",
-                "cover_emoji": "🍎",
-                "total_items": 3
-            }
-        ]
-    }
+    "code": 200,
+    "message": "success",
+    "data": [
+        {
+            "id": "word_animals",
+            "type": "word",
+            "topic": "animals",
+            "title": "Animal Words",
+            "cover_emoji": "🐶",
+            "total_items": 3
+        },
+        {
+            "id": "word_food",
+            "type": "word",
+            "topic": "food",
+            "title": "Food Words",
+            "cover_emoji": "🍗",
+            "total_items": 3
+        },
+        {
+            "id": "word_fruits",
+            "type": "word",
+            "topic": "fruits",
+            "title": "Fruit Words",
+            "cover_emoji": "🍎",
+            "total_items": 3
+        }
+    ]
+}
     ''';
 
     if (mounted) {
@@ -70,6 +79,54 @@ class _TopicSelectPageState extends State<TopicSelectPage> {
           _topicList = decoded['data'];
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _startSessionAndNavigate({
+    required String unitId,
+    required String topic,
+  }) async {
+    if (_startingUnitId != null) return;
+
+    setState(() => _startingUnitId = unitId);
+    try {
+      final uri = Uri.parse('$_apiBaseUrl/api/v1/pronunciation/session/start');
+      final res = await http.post(
+        uri,
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode({'unit_id': unitId}),
+      );
+
+      final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+      if (decoded['code'] != 200) {
+        throw Exception(decoded['message'] ?? 'start session failed');
+      }
+
+      final data = decoded['data'] as Map<String, dynamic>;
+      final sessionId = (data['session_id'] ?? '').toString();
+      final currentItem = (data['current_item'] ?? {}) as Map<String, dynamic>;
+
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PronunciationPracticePage(
+            sessionId: sessionId,
+            currentItem: currentItem,
+            type: widget.type,
+            topic: topic,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('启动练习失败：$e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _startingUnitId = null);
       }
     }
   }
@@ -148,6 +205,7 @@ class _TopicSelectPageState extends State<TopicSelectPage> {
                                 // 将每个item通过对应的id, topic, cover_emoji等绑定去渲染
                                 return _buildTopicCard(
                                   id: item['id'] ?? '',
+                                  topic: item['topic'] ?? '',
                                   emoji: item['cover_emoji'] ?? '✨',
                                   label: item['title'] ?? item['topic'] ?? '',
                                 );
@@ -204,13 +262,13 @@ class _TopicSelectPageState extends State<TopicSelectPage> {
   // 话题卡片组件 (毛玻璃效果)
   Widget _buildTopicCard({
     required String id,
+    required String topic,
     required String emoji,
     required String label,
   }) {
     return GestureDetector(
       onTap: () {
-        // TODO: 这里触发了某个具体的主题练习跳转。可以加上你的路由跳转逻辑
-        debugPrint('Clicked Topic Card: $id');
+        _startSessionAndNavigate(unitId: id, topic: topic);
       },
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
@@ -236,6 +294,16 @@ class _TopicSelectPageState extends State<TopicSelectPage> {
                     color: Colors.white,
                   ),
                 ),
+                const SizedBox(height: 8),
+                if (_startingUnitId == id)
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Color(0xFFFDC003),
+                    ),
+                  ),
               ],
             ),
           ),

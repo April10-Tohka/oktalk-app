@@ -6,11 +6,19 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 
-var testAudioUrl =
-    'https://oktalk.oss-cn-heyuan.aliyuncs.com/scene/0420b0b4-9167-47f5-8a42-3a91c53539a8/ai_50103999-f8a5-4a69-93e9-b3bd4350afa4.wav';
-
 class PronunciationPracticePage extends StatefulWidget {
-  const PronunciationPracticePage({super.key});
+  final String sessionId;
+  final Map<String, dynamic> currentItem;
+  final String type;
+  final String topic;
+
+  const PronunciationPracticePage({
+    super.key,
+    required this.sessionId,
+    required this.currentItem,
+    required this.type,
+    required this.topic,
+  });
 
   @override
   State<PronunciationPracticePage> createState() =>
@@ -27,19 +35,37 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
   bool _isPlayingStandard = false;
   bool _isPlayingMyAudio = false;
 
-  // Mock 的测试数据
-  final String _standardAudioUrl = testAudioUrl; // 替换为真实的 OSS 标准读音URL
+  // 练习会话核心数据
+  late final String _sessionId;
+  late Map<String, dynamic> _currentItem;
+  late final String _type;
+  late final String _topic;
+
+  late String _content;
+  late String _standardAudioUrl;
+  late int _itemIndex;
+  late int _totalItems;
 
   // 接口返回的数据
   bool _hasResult = false;
   int _stars = 0;
   String _correctionHint = '';
   String _myAudioUrl = '';
-  String? _recordedFilePath;
 
   @override
   void initState() {
     super.initState();
+    _sessionId = widget.sessionId;
+    _currentItem = widget.currentItem;
+    _type = widget.type;
+    _topic = widget.topic;
+
+    _content = (_currentItem['content'] ?? '').toString();
+    _standardAudioUrl = (_currentItem['standard_audio_url'] ?? '').toString();
+    _itemIndex = int.tryParse((_currentItem['item_index'] ?? 0).toString()) ?? 0;
+    _totalItems =
+        int.tryParse((_currentItem['total_items'] ?? 0).toString()) ?? 0;
+
     // 监听播放完成事件以重置播放状态
     _audioPlayer.onPlayerComplete.listen((_) {
       if (mounted) {
@@ -62,6 +88,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
 
   // 播放标准读音
   Future<void> _playStandardAudio() async {
+    if (_standardAudioUrl.isEmpty) return;
     if (_isPlayingStandard) {
       await _audioPlayer.stop();
       setState(() => _isPlayingStandard = false);
@@ -134,7 +161,6 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
       final Directory tempDir = await getTemporaryDirectory();
       final String filePath =
           '${tempDir.path}/practice_record_${DateTime.now().millisecondsSinceEpoch}.wav';
-      _recordedFilePath = filePath;
 
       // 按照规定：采样率16k、位长16bit、单声道，PCM 格式 (用 pcm16bits 编码保存)
       await _audioRecorder.start(
@@ -178,6 +204,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
   // ==== Mock Evaluate API ====
 
   Future<void> _evaluate(String filePath) async {
+    debugPrint('evaluate session=$_sessionId file=$filePath');
     // 模拟接口网络请求的加载圈
     showDialog(
       context: context,
@@ -203,8 +230,8 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
         _hasResult = true;
         _stars = 3; // 获得了 3 颗星
         _correctionHint = "注意 'oo' 的发音，嘴型更圆一些";
-        // 假装已经上传到了 OSS 并获得了音频 url
-        _myAudioUrl = testAudioUrl;
+        // 假装已经上传到了 OSS 并获得了音频 url（这里暂时复用标准音频 URL）
+        _myAudioUrl = _standardAudioUrl;
       });
     }
   }
@@ -284,8 +311,8 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
               backgroundColor: Colors.white.withOpacity(0.1),
             ),
           ),
-          const Text(
-            'Food - Word Practice',
+          Text(
+            '$_topic - $_type Practice',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -298,8 +325,8 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
               color: Colors.white.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Text(
-              '1 / 10',
+            child: Text(
+              '$_itemIndex / $_totalItems',
               style: TextStyle(
                 color: Colors.white70,
                 fontWeight: FontWeight.bold,
@@ -317,17 +344,24 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
       width: double.infinity,
       height: 4,
       color: Colors.white.withOpacity(0.1),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-          width: 40, // 10% 进度
-          height: 4,
-          decoration: const BoxDecoration(
-            color: Color(0xFFFDC003), // 黄色进度
-            borderRadius: BorderRadius.horizontal(right: Radius.circular(2)),
-            boxShadow: [BoxShadow(color: Color(0x80FDC003), blurRadius: 8)],
-          ),
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final total = _totalItems <= 0 ? 1 : _totalItems;
+          final idx = _itemIndex.clamp(0, total);
+          final progress = idx / total;
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              width: constraints.maxWidth * progress,
+              height: 4,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFDC003),
+                borderRadius: BorderRadius.horizontal(right: Radius.circular(2)),
+                boxShadow: [BoxShadow(color: Color(0x80FDC003), blurRadius: 8)],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -348,22 +382,13 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
           ),
           child: Column(
             children: [
-              const Text(
-                'Good morning',
+              Text(
+                _content,
                 style: TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
                   letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '/ɡʊd ˈmɔːrnɪŋ/',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.white54,
-                  fontFamily: 'monospace',
                 ),
               ),
               const SizedBox(height: 32),
