@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'ai_chat_page.dart';
 import 'smart_report_page.dart';
 import 'free_talk_page.dart';
+import 'scence_select_page.dart';
+import 'practice_type_page.dart';
 
 class AiHomePage extends StatelessWidget {
   const AiHomePage({Key? key}) : super(key: key);
@@ -59,7 +61,7 @@ class AiHomePage extends StatelessWidget {
             child: Column(
               children: [
                 // 顶部导航栏 (AppBar)
-                _buildAppBar(),
+                _buildAppBar(context),
                 const SizedBox(height: 20),
 
                 // 4个功能图标模块
@@ -122,7 +124,7 @@ class AiHomePage extends StatelessWidget {
   }
 
   /// 顶部导航行
-  Widget _buildAppBar() {
+  Widget _buildAppBar(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Row(
@@ -135,7 +137,7 @@ class AiHomePage extends StatelessWidget {
               size: 24,
             ),
             onPressed: () {
-              // 返回上一页
+              Navigator.pop(context);
             },
           ),
           const Expanded(
@@ -180,6 +182,20 @@ class AiHomePage extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const SmartReportPage()),
+          );
+        } else {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('提示'),
+              content: Text('$title功能在维护中'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('确定'),
+                ),
+              ],
+            ),
           );
         }
       },
@@ -315,12 +331,17 @@ class AiHomePage extends StatelessWidget {
   Widget _buildTagButton(BuildContext context, String text, Color bgColor) {
     return GestureDetector(
       onTap: () {
-        if (text == '一句一句') {
+        if (text == '模拟场景对话') {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const AiChatPage()),
+            MaterialPageRoute(builder: (context) => const ScenceSelectPage()),
           );
-        } else if (text == '自由说') {
+        } else if (text == 'AI纠音') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const PracticeTypeScreen()),
+          );
+        } else if (text == '学习对话') {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const FreeTalkPage()),

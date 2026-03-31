@@ -129,7 +129,9 @@ class PracticeTypeScreen extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: IconButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.pop(context);
+              },
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               style: IconButton.styleFrom(
                 backgroundColor: Colors.white.withOpacity(0.05),
