@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart'; // 新增引入
 
 // 1. 定义一个简单的数据模型，用来装载消息
 class ChatMessage {
@@ -8,12 +9,14 @@ class ChatMessage {
   final String message;
   final String translation;
   final String avatarUrl;
+  final String audioUrl; // 新增：音频的 OSS URL
 
   ChatMessage({
     required this.isUser,
     required this.message,
     required this.translation,
     required this.avatarUrl,
+    required this.audioUrl,
   });
 }
 
@@ -29,6 +32,9 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
   // 核心：滚动控制器
   final ScrollController _scrollController = ScrollController();
 
+  // 新增：创建一个音频播放器实例
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
   // 动态消息列表（初始化放入一些历史聊天记录）
   final List<ChatMessage> _messages = [
     ChatMessage(
@@ -37,6 +43,8 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
       translation: "你好！你今天过得怎么样？",
       avatarUrl:
           'https://lh3.googleusercontent.com/aida-public/AB6AXuBxO0JZA5GxGgzW8WQNz1ntF9xNUg9_SB64QKAXzuxW0ZchX_TLh1THmqKRtX3K1zuP1OOSOXC8bWI9SHefKSi1HYTbixRgPrQNHQ8j7ics6LZEJ0JyDu6ryZ8yjR7LIAfnXrtCiTHDRMNoUOQ38e1vt5amVBz2GigluhwRoq6kQcmQ148JhLnAlX8HvlLPvOJrOo5dj2w3_toZ1syQZCqV0dsiuCH1U2TkQPdXy7dd-3b4mi2n2GnNFvjZQ3X_TD0CoNupirRrHwVk',
+      audioUrl:
+          'https://oktalk.oss-cn-heyuan.aliyuncs.com/scene/0420b0b4-9167-47f5-8a42-3a91c53539a8/ai_50103999-f8a5-4a69-93e9-b3bd4350afa4.wav?Expires=1774802243&OSSAccessKeyId=TMP.3KvUVTtM1QdeTPhkJaTLCG7gzPv8E1HVtdymnj3EuB2Ct74V4f3FyhVsZn2qFXrPbyifsS8ay7zzvgHvWTWakNUnKQ1sWP&Signature=BS%2Fzs%2B9Ha45Z4WsjG07CRpLxy0A%3D',
     ),
     ChatMessage(
       isUser: true,
@@ -44,6 +52,8 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
       translation: "我挺好的，谢谢！",
       avatarUrl:
           'https://lh3.googleusercontent.com/aida-public/AB6AXuDzs9GykjnkQeNn73Nyj4ObXT07n-PslY-0aswBKdr0kgxpSFu2jgVCGrugGIlY9eSUR5A5gL2w60AR7fEHx3KGZAZiUxth3YwNf5rzftHddfY5xwxrJGVYqNr1zSrFHHyqufPUqq-cxzRNUQYRSxHsTOq_cVqQfhws2zAU9bFjx5O8kSBJ1Cz_VZlVIJtYNuftkZ3fgCdGiUPnhd_nlL8VrNDazdkalBeUX0WofwAYWnSuxMjTxDy3vnWwDec4tN91F_iJgnDHVn6r',
+      audioUrl:
+          'https://oktalk.oss-cn-heyuan.aliyuncs.com/scene/0420b0b4-9167-47f5-8a42-3a91c53539a8/ai_50103999-f8a5-4a69-93e9-b3bd4350afa4.wav?Expires=1774802243&OSSAccessKeyId=TMP.3KvUVTtM1QdeTPhkJaTLCG7gzPv8E1HVtdymnj3EuB2Ct74V4f3FyhVsZn2qFXrPbyifsS8ay7zzvgHvWTWakNUnKQ1sWP&Signature=BS%2Fzs%2B9Ha45Z4WsjG07CRpLxy0A%3D',
     ),
     ChatMessage(
       isUser: false,
@@ -51,6 +61,8 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
       translation: "太好了！你今天做了什么？",
       avatarUrl:
           'https://lh3.googleusercontent.com/aida-public/AB6AXuBnr2qITN-PxhsJpb3ETqKq0t0YDYCiZFhiCvf7WB2f1QlvnxDpCEQskZEM2xvM-LVqhrYICNnFXg4WQkrmjhD6oOHAlISXrNof02vpkqyJrguZSf_D9jUEJz0TtdcGmpaBg2bTjLtYHckJnmhs-aVN6pC7ceUg1YB6NpXiPt-wiH1zHkt9lQkXaEyfnwg9oua6r42j60sKeS59tYeC8zTUzCCGKkMW3KPtIC8tDeATHoUskaiu0lForDXLw4ErnPXshqfqblG3CqAT',
+      audioUrl:
+          'https://oktalk.oss-cn-heyuan.aliyuncs.com/scene/0420b0b4-9167-47f5-8a42-3a91c53539a8/ai_50103999-f8a5-4a69-93e9-b3bd4350afa4.wav?Expires=1774802243&OSSAccessKeyId=TMP.3KvUVTtM1QdeTPhkJaTLCG7gzPv8E1HVtdymnj3EuB2Ct74V4f3FyhVsZn2qFXrPbyifsS8ay7zzvgHvWTWakNUnKQ1sWP&Signature=BS%2Fzs%2B9Ha45Z4WsjG07CRpLxy0A%3D',
     ),
     ChatMessage(
       isUser: true,
@@ -58,13 +70,28 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
       translation: "我去上学了。",
       avatarUrl:
           'https://lh3.googleusercontent.com/aida-public/AB6AXuAd9KBX1M6TWv1vCNjF_hY96lZjGdAbrhUuKn1mSLSITn0htzFJhpLi9iqvlrQ_IKY_hcx2G6V9xX9oS7QR0PROvg17-8u8h93Ti7jxwFgO2A5DktgZer4gWzicW-oNL6hVePnHUY2hJwnsOW6LXB3_5de03cYIWviTsmUnID3LhdAwRZScV__2fq7EOFXI5_Lk2Lj41I72hPONZNUGJt1yPS9ie77eizkgCU6ezQbNq4KrOx3dO_bX4Np6onZLLCeBcp4Xbj80AiBo',
+      audioUrl:
+          'https://oktalk.oss-cn-heyuan.aliyuncs.com/scene/0420b0b4-9167-47f5-8a42-3a91c53539a8/ai_50103999-f8a5-4a69-93e9-b3bd4350afa4.wav?Expires=1774802243&OSSAccessKeyId=TMP.3KvUVTtM1QdeTPhkJaTLCG7gzPv8E1HVtdymnj3EuB2Ct74V4f3FyhVsZn2qFXrPbyifsS8ay7zzvgHvWTWakNUnKQ1sWP&Signature=BS%2Fzs%2B9Ha45Z4WsjG07CRpLxy0A%3D',
     ),
   ];
 
   @override
   void dispose() {
-    _scrollController.dispose(); // 记得释放控制器，防止内存泄漏
+    _scrollController.dispose();
+    _audioPlayer.dispose(); // 新增：页面销毁时释放播放器资源
     super.dispose();
+  }
+
+  // 新增：播放音频的核心方法
+  Future<void> _playAudio(String url) async {
+    try {
+      // 每次播放前先停止上一条可能还在播放的语音，防止声音重叠
+      await _audioPlayer.stop();
+      // 直接播放网络 URL
+      await _audioPlayer.play(UrlSource(url));
+    } catch (e) {
+      print("播放音频失败: $e");
+    }
   }
 
   // 核心功能：丝滑滚动到最底部
@@ -91,6 +118,7 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
           translation: translation,
           avatarUrl:
               'https://lh3.googleusercontent.com/aida-public/AB6AXuDzs9GykjnkQeNn73Nyj4ObXT07n-PslY-0aswBKdr0kgxpSFu2jgVCGrugGIlY9eSUR5A5gL2w60AR7fEHx3KGZAZiUxth3YwNf5rzftHddfY5xwxrJGVYqNr1zSrFHHyqufPUqq-cxzRNUQYRSxHsTOq_cVqQfhws2zAU9bFjx5O8kSBJ1Cz_VZlVIJtYNuftkZ3fgCdGiUPnhd_nlL8VrNDazdkalBeUX0WofwAYWnSuxMjTxDy3vnWwDec4tN91F_iJgnDHVn6r',
+          audioUrl: '',
         ),
       );
     });
@@ -118,6 +146,7 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
                   message: msg.message,
                   translation: msg.translation,
                   avatarUrl: msg.avatarUrl,
+                  audioUrl: msg.audioUrl,
                 );
               } else {
                 return _buildAiBubble(
@@ -125,6 +154,7 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
                   message: msg.message,
                   translation: msg.translation,
                   avatarUrl: msg.avatarUrl,
+                  audioUrl: msg.audioUrl,
                 );
               }
             },
@@ -174,6 +204,7 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
     required String message,
     required String translation,
     required String avatarUrl,
+    required String audioUrl,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,9 +247,18 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Icon(
-                      Icons.volume_up,
-                      color: const Color(0xFF3D6620).withOpacity(0.6),
+                    GestureDetector(
+                      onTap: () => _playAudio(audioUrl), // 点击时调用播放方法
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          left: 8.0,
+                          bottom: 8.0,
+                        ), // 扩大一点点击热区
+                        child: Icon(
+                          Icons.volume_up,
+                          color: const Color(0xFF3D6620).withOpacity(0.8),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -245,6 +285,7 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
     required String message,
     required String translation,
     required String avatarUrl,
+    required String audioUrl,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,9 +313,18 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.volume_up,
-                      color: const Color(0xFF1A3D2B).withOpacity(0.6),
+                    GestureDetector(
+                      onTap: () => _playAudio(audioUrl), // 点击时调用播放方法
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          left: 8.0,
+                          bottom: 8.0,
+                        ), // 扩大一点点击热区
+                        child: Icon(
+                          Icons.volume_up,
+                          color: const Color(0xFF3D6620).withOpacity(0.8),
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
