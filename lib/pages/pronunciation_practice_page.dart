@@ -8,6 +8,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 
+import 'pronunciation_summary_page.dart';
+
 class PronunciationPracticePage extends StatefulWidget {
   final String sessionId;
   final Map<String, dynamic> currentItem;
@@ -332,20 +334,13 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
       final unitCompleted = data['unit_completed'] == true;
       if (unitCompleted) {
         if (!mounted) return;
-        await showDialog<void>(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('已完成本单元'),
-            content: const Text('做得很好！'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('好的'),
-              ),
-            ],
+        await _audioPlayer.stop();
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(
+            builder: (_) => PronunciationSummaryPage(sessionId: _sessionId),
           ),
         );
-        if (mounted) Navigator.pop(context);
         return;
       }
 
