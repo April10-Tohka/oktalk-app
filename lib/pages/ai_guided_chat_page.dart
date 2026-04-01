@@ -9,7 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
-import 'ai_home_page.dart';
+import 'guided_chat_summary_page.dart';
 
 // 1. 定义一个简单的数据模型，用来装载消息
 class ChatMessage {
@@ -339,23 +339,15 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
       }
 
       if (sceneCompleted) {
-        if (!mounted) return;
-        await showDialog<void>(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('对话结束'),
-            content: const Text('你已完成本次场景对话！'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('回到首页'),
-              ),
-            ],
-          ),
-        );
+        await _audioPlayer.stop();
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const AiHomePage()),
+          MaterialPageRoute(
+            builder: (_) => GuidedChatSummaryPage(
+              sessionId: _sessionId,
+              title: widget.title,
+            ),
+          ),
         );
       }
     } catch (e) {
