@@ -547,100 +547,100 @@ class _PronunciationSummaryPageState extends State<PronunciationSummaryPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        // 统一使用毛玻璃背景
         color: Colors.white.withOpacity(0.12),
         borderRadius: BorderRadius.circular(20),
-        // 如果是最佳表现，加上金色的发光边框，否则是普通的半透明白边
         border: Border.all(
           color: isBest
               ? const Color(0xFFFDC003).withOpacity(0.6)
               : Colors.white.withOpacity(0.15),
           width: 1.5,
         ),
-        // 如果是最佳表现，添加金色的外发光阴影
         boxShadow: isBest
             ? [
-                BoxShadow(
-                  color: const Color(0xFFFDC003).withOpacity(0.15),
-                  blurRadius: 16,
-                  spreadRadius: 2,
-                ),
-              ]
+          BoxShadow(
+            color: const Color(0xFFFDC003).withOpacity(0.15),
+            blurRadius: 16,
+            spreadRadius: 2,
+          ),
+        ]
             : [],
       ),
+      // 优化了这里的 Row 结构
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              // 左侧图标区域 (还原提示词中的 Emoji)
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: isBest
-                      ? const Color(0xFFFDC003).withOpacity(0.2)
-                      : const Color(0xFFC0F19A).withOpacity(0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    isBest ? '👑' : '✨',
-                    style: const TextStyle(fontSize: 22),
-                  ),
-                ),
+          // 1. 左侧图标区域 (固定大小)
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: isBest
+                  ? const Color(0xFFFDC003).withOpacity(0.2)
+                  : const Color(0xFFC0F19A).withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                isBest ? '👑' : '✨',
+                style: const TextStyle(fontSize: 22),
               ),
-              const SizedBox(width: 16),
-              // 中间文本区域
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    word,
-                    style: GoogleFonts.plusJakartaSans(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  // 状态标签
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      // 根据状态改变标签背景
-                      color: isBest
-                          ? const Color(0xFFFDC003).withOpacity(0.2)
-                          : Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    child: Text(
-                      status,
-                      style: GoogleFonts.plusJakartaSans(
-                        // 最佳表现的文字用亮金色，普通的用白色
-                        color: isBest ? const Color(0xFFFFD700) : Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
-          // 右侧星星评分区域
+          const SizedBox(width: 16),
+
+          // 2. 中间文本区域 (使用 Expanded 吸收剩余空间，防止溢出)
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  word,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  // 增加限制：最多显示 2 行，超出的显示省略号
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                // 状态标签
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isBest
+                        ? const Color(0xFFFDC003).withOpacity(0.2)
+                        : Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: Text(
+                    status,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: isBest ? const Color(0xFFFFD700) : Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 8), // 文字和星星之间保留一点间距
+
+          // 3. 右侧星星评分区域 (使用 mainAxisSize.min 保持紧凑)
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: List.generate(5, (index) {
               return Icon(
-                // 使用圆润版的星星，更贴合儿童 UI
                 index < stars ? Icons.star_rounded : Icons.star_border_rounded,
                 size: 22,
                 color: index < stars
-                    ? const Color(0xFFFDC003) // 点亮的星星为金色
-                    : Colors.white.withOpacity(0.3), // 未点亮的为半透明白色
+                    ? const Color(0xFFFDC003)
+                    : Colors.white.withOpacity(0.3),
               );
             }),
           ),
