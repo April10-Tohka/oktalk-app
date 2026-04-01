@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'ai_chat_page.dart';
 import 'smart_report_page.dart';
 import 'free_talk_page.dart';
 import 'scence_select_page.dart';
