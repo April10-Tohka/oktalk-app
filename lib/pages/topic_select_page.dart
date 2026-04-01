@@ -31,55 +31,30 @@ class _TopicSelectPageState extends State<TopicSelectPage> {
   }
 
   Future<void> _fetchTopics() async {
-    // 这里模拟从后端获取数据，实际开发中请使用 http 库请求真实接口:
-    // final response = await http.get(Uri.parse('https://your_domain/api/v1/pronunciation/units?type=${widget.type}'));
-
-    await Future.delayed(const Duration(milliseconds: 800)); // 模拟网络延迟加载效果
-
-    // 根据传入的 type 构造对应 Mock 数据
-    final titleSuffix = widget.type == 'word' ? 'Words' : 'Sentences';
-    final String mockResponse =
-        '''
-    {
-    "code": 200,
-    "message": "success",
-    "data": [
-        {
-            "id": "word_animals",
-            "type": "word",
-            "topic": "animals",
-            "title": "Animal Words",
-            "cover_emoji": "🐶",
-            "total_items": 3
-        },
-        {
-            "id": "word_food",
-            "type": "word",
-            "topic": "food",
-            "title": "Food Words",
-            "cover_emoji": "🍗",
-            "total_items": 3
-        },
-        {
-            "id": "word_fruits",
-            "type": "word",
-            "topic": "fruits",
-            "title": "Fruit Words",
-            "cover_emoji": "🍎",
-            "total_items": 3
-        }
-    ]
-}
-    ''';
-
-    if (mounted) {
-      final decoded = jsonDecode(mockResponse);
-      if (decoded['code'] == 200) {
-        setState(() {
-          _topicList = decoded['data'];
-          _isLoading = false;
-        });
+    try {
+      final uri = Uri.parse('$_apiBaseUrl/api/v1/pronunciation/units').replace(
+        queryParameters: {'type': widget.type},
+      );
+      final res = await http.get(uri);
+      final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+      if (decoded['code'] != 200) {
+        throw Exception(decoded['message'] ?? '加载单元列表失败');
       }
+      final data = decoded['data'];
+      if (!mounted) return;
+      setState(() {
+        _topicList = data is List<dynamic> ? data : <dynamic>[];
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _topicList = [];
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('加载话题失败：$e')),
+      );
     }
   }
 
@@ -315,23 +290,31 @@ class _TopicSelectPageState extends State<TopicSelectPage> {
   // 挑战横幅组件
   Widget _buildChallengeBanner() {
     return Container(
-      height: 160,
+      height: 140, // 稍微调低一点高度，更加精致
       width: double.infinity,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(28),
+        // 加强一点深绿色和金色的渐变对比，让它从背景中浮现出来
         gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            const Color(0xFFFDC003).withOpacity(0.2),
-            Colors.transparent,
+            const Color(0xFFFDC003).withOpacity(0.25),
+            Colors.white.withOpacity(0.05),
           ],
+        ),
+        border: Border.all(
+          color: const Color(0xFFFDC003).withOpacity(0.3),
+          width: 1,
         ),
       ),
       child: Stack(
+        clipBehavior: Clip.none, // 允许元素稍微溢出一点点，更有立体感
         children: [
           Padding(
             padding: const EdgeInsets.all(24.0),
             child: SizedBox(
-              width: 200,
+              width: 220, // 给文字多留点空间
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -339,30 +322,40 @@ class _TopicSelectPageState extends State<TopicSelectPage> {
                   const Text(
                     'Ready for a challenge?',
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800, // 加粗标题
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
                   Text(
-                    'Practice daily to unlock new special categories!',
+                    'Practice daily to unlock new\nspecial categories!',
                     style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.6),
+                      fontSize: 13,
+                      height: 1.4, // 增加行高，提升阅读体验
+                      color: Colors.white.withOpacity(0.7),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          Positioned(
-            right: -10,
-            bottom: 0,
-            child: Image.network(
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuAi2KCXJ31F0WYJDa4QI1O8G5WQ1xki_nGKWMvTAfljZzK5jXfLfY2RAUWF1M9TgpV4WEQPCDTrg6N8aEHvc-ZG8n6RkwAPdhDKqkWMw6Fmgvt4wH9D02U4cAaXJjxN3dRYsCp34oPNvi3ZO-K9WWxzo8TLiFKEN-mDXfrqOWosfyvGxH8eIjuqdpyPX4TvyKQkHEjagYk4dp_JFLDxrrsnLRhyLJSSxbsrNcovZ5hkowdFUyvvFjARSeH4Gik9NWCv7bbCYgW-70ia',
-              height: 150,
-              fit: BoxFit.contain,
+          // 用大号 Emoji 替换损坏的网络图片
+          const Positioned(
+            right: 16,
+            bottom: 10, // 稍微靠下一点，错落有致
+            child: Text(
+              '🏆', // 如果你更喜欢宝箱，可以换成 '🎁' 或者 '🏆'
+              style: TextStyle(
+                fontSize: 80, // 超大号 Emoji
+                shadows: [
+                  // 给 Emoji 加上一点发光阴影
+                  Shadow(
+                    color: Color(0xFFFDC003),
+                    blurRadius: 20,
+                  ),
+                ],
+              ),
             ),
           ),
         ],

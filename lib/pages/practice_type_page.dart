@@ -85,41 +85,41 @@ class PracticeTypeScreen extends StatelessWidget {
                           },
                         ),
 
-                        // 5. AI Tutor 插图
-                        // TODO: 后续看情况这个插图需不需要！
-                        const SizedBox(height: 40),
-                        Center(
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Container(
-                                width: 200,
-                                height: 200,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.green.withOpacity(0.15),
-                                      blurRadius: 100,
-                                      spreadRadius: 20,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(20),
-                                child: Image.network(
-                                  'https://picsum.photos/seed/tutor/400/400',
-                                  width: 180,
-                                  height: 180,
-                                  fit: BoxFit.cover,
-                                  color: Colors.white.withOpacity(0.8),
-                                  colorBlendMode: BlendMode.modulate,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        // // 5. AI Tutor 插图
+                        // // TODO: 后续看情况这个插图需不需要！
+                        // const SizedBox(height: 40),
+                        // Center(
+                        //   child: Stack(
+                        //     alignment: Alignment.center,
+                        //     children: [
+                        //       Container(
+                        //         width: 200,
+                        //         height: 200,
+                        //         decoration: BoxDecoration(
+                        //           shape: BoxShape.circle,
+                        //           boxShadow: [
+                        //             BoxShadow(
+                        //               color: Colors.green.withOpacity(0.15),
+                        //               blurRadius: 100,
+                        //               spreadRadius: 20,
+                        //             ),
+                        //           ],
+                        //         ),
+                        //       ),
+                        //       ClipRRect(
+                        //         borderRadius: BorderRadius.circular(20),
+                        //         child: Image.network(
+                        //           'https://picsum.photos/seed/tutor/400/400',
+                        //           width: 180,
+                        //           height: 180,
+                        //           fit: BoxFit.cover,
+                        //           color: Colors.white.withOpacity(0.8),
+                        //           colorBlendMode: BlendMode.modulate,
+                        //         ),
+                        //       ),
+                        //     ],
+                        //   ),
+                        // ),
                       ],
                     ),
                   ),
