@@ -4,6 +4,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart'; // 新增引入
 import 'package:http/http.dart' as http;
+import 'package:record/record.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+
+import 'ai_home_page.dart';
 
 // 1. 定义一个简单的数据模型，用来装载消息
 class ChatMessage {
@@ -50,6 +56,7 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
 
   // 新增：创建一个音频播放器实例
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final AudioRecorder _audioRecorder = AudioRecorder();
 
   static const String _aiAvatarUrl =
       'https://lh3.googleusercontent.com/aida-public/AB6AXuBxO0JZA5GxGgzW8WQNz1ntF9xNUg9_SB64QKAXzuxW0ZchX_TLh1THmqKRtX3K1zuP1OOSOXC8bWI9SHefKSi1HYTbixRgPrQNHQ8j7ics6LZEJ0JyDu6ryZ8yjR7LIAfnXrtCiTHDRMNoUOQ38e1vt5amVBz2GigluhwRoq6kQcmQ148JhLnAlX8HvlLPvOJrOo5dj2w3_toZ1syQZCqV0dsiuCH1U2TkQPdXy7dd-3b4mi2n2GnNFvjZQ3X_TD0CoNupirRrHwVk';
@@ -58,6 +65,8 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
 
   bool _isLoading = true;
   String? _error;
+  bool _isRequesting = false;
+  String? _recordingFilePath;
 
   late final String _sessionId;
   late int _currentStep;
@@ -172,6 +181,7 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
   void dispose() {
     _scrollController.dispose();
     _audioPlayer.dispose(); // 新增：页面销毁时释放播放器资源
+    _audioRecorder.dispose();
     super.dispose();
   }
 
@@ -188,6 +198,180 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
     }
   }
 
+  Future<void> _startRecording() async {
+    if (_isRequesting) return;
+
+    var status = await Permission.microphone.status;
+    if (!status.isGranted) {
+      status = await Permission.microphone.request();
+      if (!status.isGranted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('需要麦克风权限才能录音')),
+        );
+        return;
+      }
+    }
+
+    if (!await _audioRecorder.hasPermission()) return;
+
+    try {
+      final Directory tempDir = await getTemporaryDirectory();
+      final String filePath =
+          '${tempDir.path}/scene_record_${DateTime.now().millisecondsSinceEpoch}.wav';
+      _recordingFilePath = filePath;
+
+      await _audioRecorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.wav,
+          sampleRate: 16000,
+          numChannels: 1,
+        ),
+        path: filePath,
+      );
+    } catch (e) {
+      debugPrint('录音启动失败: $e');
+    }
+  }
+
+  Future<void> _stopRecordingAndSend() async {
+    if (_isRequesting) return;
+    try {
+      final path = await _audioRecorder.stop();
+      final filePath = path ?? _recordingFilePath;
+      if (filePath == null || filePath.isEmpty) return;
+      await _sendNext(filePath);
+    } catch (e) {
+      debugPrint('录音停止失败: $e');
+    } finally {
+      _recordingFilePath = null;
+    }
+  }
+
+  Future<void> _sendNext(String filePath) async {
+    if (_isRequesting) return;
+    setState(() => _isRequesting = true);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF3D6620)),
+      ),
+    );
+
+    try {
+      final uri = Uri.parse('$_apiBaseUrl/api/v1/scene/session/next');
+      final req = http.MultipartRequest('POST', uri);
+      req.fields['session_id'] = _sessionId;
+      req.fields['step_id'] = _currentStep.toString();
+      req.fields['audio_type'] = 'wav';
+      req.files.add(await http.MultipartFile.fromPath('audio_file', filePath));
+
+      final streamed = await req.send();
+      final body = await streamed.stream.bytesToString();
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+      if (decoded['code'] != 200) {
+        throw Exception(decoded['message'] ?? 'next failed');
+      }
+
+      final data = decoded['data'] as Map<String, dynamic>;
+      final userText = (data['user_text'] ?? '').toString();
+      final userAudioUrl = (data['user_audio_url'] ?? '').toString();
+      final aiReplyText = (data['ai_reply_text'] ?? '').toString();
+      final aiAudioUrl = (data['ai_audio_url'] ?? '').toString();
+      final stepAdvanced = data['step_advanced'] == true;
+      final sceneCompleted = data['scene_completed'] == true;
+      final currentStep =
+          int.tryParse((data['current_step'] ?? _currentStep).toString()) ??
+              _currentStep;
+      final nextQuestion = (data['next_question'] ?? '').toString();
+      final nextQuestionAudioUrl =
+          (data['next_question_audio_url'] ?? '').toString();
+
+      if (!mounted) return;
+      setState(() {
+        if (userText.isNotEmpty) {
+          _messages.add(
+            ChatMessage(
+              isUser: true,
+              message: userText,
+              translation: '',
+              avatarUrl: _userAvatarUrl,
+              audioUrl: userAudioUrl,
+            ),
+          );
+        }
+        if (aiReplyText.isNotEmpty) {
+          _messages.add(
+            ChatMessage(
+              isUser: false,
+              message: aiReplyText,
+              translation: '',
+              avatarUrl: _aiAvatarUrl,
+              audioUrl: aiAudioUrl,
+            ),
+          );
+        }
+        _currentStep = currentStep;
+      });
+      _scrollToBottom();
+
+      if (stepAdvanced &&
+          nextQuestion.isNotEmpty &&
+          nextQuestionAudioUrl.isNotEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _question = nextQuestion;
+          _questionAudioUrl = nextQuestionAudioUrl;
+          _messages.add(
+            ChatMessage(
+              isUser: false,
+              message: nextQuestion,
+              translation: '',
+              avatarUrl: _aiAvatarUrl,
+              audioUrl: nextQuestionAudioUrl,
+            ),
+          );
+        });
+        _scrollToBottom();
+        await _playAudio(nextQuestionAudioUrl);
+      }
+
+      if (sceneCompleted) {
+        if (!mounted) return;
+        await showDialog<void>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('对话结束'),
+            content: const Text('你已完成本次场景对话！'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('回到首页'),
+              ),
+            ],
+          ),
+        );
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AiHomePage()),
+        );
+      }
+    } catch (e) {
+      debugPrint('调用 next 失败: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('发送失败：$e')),
+      );
+    } finally {
+      if (mounted) {
+        Navigator.pop(context);
+        setState(() => _isRequesting = false);
+      }
+    }
+  }
+
   // 核心功能：丝滑滚动到最底部
   void _scrollToBottom() {
     // 延迟到当前帧渲染结束后再执行滚动，确保能获取到最新的列表高度
@@ -200,23 +384,6 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
         );
       }
     });
-  }
-
-  // 模拟发送新消息的逻辑
-  void _sendNewMessage(String text, String translation) {
-    setState(() {
-      _messages.add(
-        ChatMessage(
-          isUser: true,
-          message: text,
-          translation: translation,
-          avatarUrl:
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuDzs9GykjnkQeNn73Nyj4ObXT07n-PslY-0aswBKdr0kgxpSFu2jgVCGrugGIlY9eSUR5A5gL2w60AR7fEHx3KGZAZiUxth3YwNf5rzftHddfY5xwxrJGVYqNr1zSrFHHyqufPUqq-cxzRNUQYRSxHsTOq_cVqQfhws2zAU9bFjx5O8kSBJ1Cz_VZlVIJtYNuftkZ3fgCdGiUPnhd_nlL8VrNDazdkalBeUX0WofwAYWnSuxMjTxDy3vnWwDec4tN91F_iJgnDHVn6r',
-          audioUrl: '',
-        ),
-      );
-    });
-    _scrollToBottom(); // 消息添加后，立即触发滚动到底部
   }
 
   @override
@@ -513,22 +680,16 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
   // 底部录音区域
   Widget _buildBottomActionArea() {
     return VoiceRecordButton(
-      onRecordStart: () {
-        print('UI 触发：开始录制音频流...');
-      },
-      onRecordStop: () {
-        print('UI 触发：停止录音并发送结束信号...');
-        // 测试：模拟录音结束后发送了一条新消息
-        _sendNewMessage("I want to play games.", "我想玩游戏。");
-      },
+      onRecordStart: _startRecording,
+      onRecordStop: _stopRecordingAndSend,
     );
   }
 }
 
 // 独立的动态录音按钮组件
 class VoiceRecordButton extends StatefulWidget {
-  final VoidCallback onRecordStart;
-  final VoidCallback onRecordStop;
+  final Future<void> Function() onRecordStart;
+  final Future<void> Function() onRecordStop;
 
   const VoiceRecordButton({
     Key? key,
