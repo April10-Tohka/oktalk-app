@@ -1,7 +1,9 @@
 import 'dart:ui';
 import 'dart:math' as math;
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart'; // 新增引入
+import 'package:http/http.dart' as http;
 
 // 1. 定义一个简单的数据模型，用来装载消息
 class ChatMessage {
@@ -22,58 +24,149 @@ class ChatMessage {
 
 // 2. 将页面改为 StatefulWidget，以便管理列表状态和滚动控制器
 class AiGuidedChatPage extends StatefulWidget {
-  const AiGuidedChatPage({super.key});
+  final String title;
+  final String subtitle;
+  final Map<String, dynamic> startData;
+
+  const AiGuidedChatPage({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.startData,
+  });
 
   @override
   State<AiGuidedChatPage> createState() => _AiGuidedChatPageState();
 }
 
 class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
+  static const String _apiBaseUrl = String.fromEnvironment(
+    'OKTALK_API_BASE_URL',
+    defaultValue: 'http://10.0.2.2:8080',
+  );
+
   // 核心：滚动控制器
   final ScrollController _scrollController = ScrollController();
 
   // 新增：创建一个音频播放器实例
   final AudioPlayer _audioPlayer = AudioPlayer();
 
-  // 动态消息列表（初始化放入一些历史聊天记录）
-  final List<ChatMessage> _messages = [
-    ChatMessage(
-      isUser: false,
-      message: "Hello! How are you today?",
-      translation: "你好！你今天过得怎么样？",
-      avatarUrl:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuBxO0JZA5GxGgzW8WQNz1ntF9xNUg9_SB64QKAXzuxW0ZchX_TLh1THmqKRtX3K1zuP1OOSOXC8bWI9SHefKSi1HYTbixRgPrQNHQ8j7ics6LZEJ0JyDu6ryZ8yjR7LIAfnXrtCiTHDRMNoUOQ38e1vt5amVBz2GigluhwRoq6kQcmQ148JhLnAlX8HvlLPvOJrOo5dj2w3_toZ1syQZCqV0dsiuCH1U2TkQPdXy7dd-3b4mi2n2GnNFvjZQ3X_TD0CoNupirRrHwVk',
-      audioUrl:
-          'https://oktalk.oss-cn-heyuan.aliyuncs.com/scene/0420b0b4-9167-47f5-8a42-3a91c53539a8/ai_50103999-f8a5-4a69-93e9-b3bd4350afa4.wav?Expires=1774802243&OSSAccessKeyId=TMP.3KvUVTtM1QdeTPhkJaTLCG7gzPv8E1HVtdymnj3EuB2Ct74V4f3FyhVsZn2qFXrPbyifsS8ay7zzvgHvWTWakNUnKQ1sWP&Signature=BS%2Fzs%2B9Ha45Z4WsjG07CRpLxy0A%3D',
-    ),
-    ChatMessage(
-      isUser: true,
-      message: "I am fine, thank you!",
-      translation: "我挺好的，谢谢！",
-      avatarUrl:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuDzs9GykjnkQeNn73Nyj4ObXT07n-PslY-0aswBKdr0kgxpSFu2jgVCGrugGIlY9eSUR5A5gL2w60AR7fEHx3KGZAZiUxth3YwNf5rzftHddfY5xwxrJGVYqNr1zSrFHHyqufPUqq-cxzRNUQYRSxHsTOq_cVqQfhws2zAU9bFjx5O8kSBJ1Cz_VZlVIJtYNuftkZ3fgCdGiUPnhd_nlL8VrNDazdkalBeUX0WofwAYWnSuxMjTxDy3vnWwDec4tN91F_iJgnDHVn6r',
-      audioUrl:
-          'https://oktalk.oss-cn-heyuan.aliyuncs.com/scene/0420b0b4-9167-47f5-8a42-3a91c53539a8/ai_50103999-f8a5-4a69-93e9-b3bd4350afa4.wav?Expires=1774802243&OSSAccessKeyId=TMP.3KvUVTtM1QdeTPhkJaTLCG7gzPv8E1HVtdymnj3EuB2Ct74V4f3FyhVsZn2qFXrPbyifsS8ay7zzvgHvWTWakNUnKQ1sWP&Signature=BS%2Fzs%2B9Ha45Z4WsjG07CRpLxy0A%3D',
-    ),
-    ChatMessage(
-      isUser: false,
-      message: "That's great! What did you do today?",
-      translation: "太好了！你今天做了什么？",
-      avatarUrl:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuBnr2qITN-PxhsJpb3ETqKq0t0YDYCiZFhiCvf7WB2f1QlvnxDpCEQskZEM2xvM-LVqhrYICNnFXg4WQkrmjhD6oOHAlISXrNof02vpkqyJrguZSf_D9jUEJz0TtdcGmpaBg2bTjLtYHckJnmhs-aVN6pC7ceUg1YB6NpXiPt-wiH1zHkt9lQkXaEyfnwg9oua6r42j60sKeS59tYeC8zTUzCCGKkMW3KPtIC8tDeATHoUskaiu0lForDXLw4ErnPXshqfqblG3CqAT',
-      audioUrl:
-          'https://oktalk.oss-cn-heyuan.aliyuncs.com/scene/0420b0b4-9167-47f5-8a42-3a91c53539a8/ai_50103999-f8a5-4a69-93e9-b3bd4350afa4.wav?Expires=1774802243&OSSAccessKeyId=TMP.3KvUVTtM1QdeTPhkJaTLCG7gzPv8E1HVtdymnj3EuB2Ct74V4f3FyhVsZn2qFXrPbyifsS8ay7zzvgHvWTWakNUnKQ1sWP&Signature=BS%2Fzs%2B9Ha45Z4WsjG07CRpLxy0A%3D',
-    ),
-    ChatMessage(
-      isUser: true,
-      message: "I went to school.",
-      translation: "我去上学了。",
-      avatarUrl:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuAd9KBX1M6TWv1vCNjF_hY96lZjGdAbrhUuKn1mSLSITn0htzFJhpLi9iqvlrQ_IKY_hcx2G6V9xX9oS7QR0PROvg17-8u8h93Ti7jxwFgO2A5DktgZer4gWzicW-oNL6hVePnHUY2hJwnsOW6LXB3_5de03cYIWviTsmUnID3LhdAwRZScV__2fq7EOFXI5_Lk2Lj41I72hPONZNUGJt1yPS9ie77eizkgCU6ezQbNq4KrOx3dO_bX4Np6onZLLCeBcp4Xbj80AiBo',
-      audioUrl:
-          'https://oktalk.oss-cn-heyuan.aliyuncs.com/scene/0420b0b4-9167-47f5-8a42-3a91c53539a8/ai_50103999-f8a5-4a69-93e9-b3bd4350afa4.wav?Expires=1774802243&OSSAccessKeyId=TMP.3KvUVTtM1QdeTPhkJaTLCG7gzPv8E1HVtdymnj3EuB2Ct74V4f3FyhVsZn2qFXrPbyifsS8ay7zzvgHvWTWakNUnKQ1sWP&Signature=BS%2Fzs%2B9Ha45Z4WsjG07CRpLxy0A%3D',
-    ),
-  ];
+  static const String _aiAvatarUrl =
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuBxO0JZA5GxGgzW8WQNz1ntF9xNUg9_SB64QKAXzuxW0ZchX_TLh1THmqKRtX3K1zuP1OOSOXC8bWI9SHefKSi1HYTbixRgPrQNHQ8j7ics6LZEJ0JyDu6ryZ8yjR7LIAfnXrtCiTHDRMNoUOQ38e1vt5amVBz2GigluhwRoq6kQcmQ148JhLnAlX8HvlLPvOJrOo5dj2w3_toZ1syQZCqV0dsiuCH1U2TkQPdXy7dd-3b4mi2n2GnNFvjZQ3X_TD0CoNupirRrHwVk';
+  static const String _userAvatarUrl =
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuDzs9GykjnkQeNn73Nyj4ObXT07n-PslY-0aswBKdr0kgxpSFu2jgVCGrugGIlY9eSUR5A5gL2w60AR7fEHx3KGZAZiUxth3YwNf5rzftHddfY5xwxrJGVYqNr1zSrFHHyqufPUqq-cxzRNUQYRSxHsTOq_cVqQfhws2zAU9bFjx5O8kSBJ1Cz_VZlVIJtYNuftkZ3fgCdGiUPnhd_nlL8VrNDazdkalBeUX0WofwAYWnSuxMjTxDy3vnWwDec4tN91F_iJgnDHVn6r';
+
+  bool _isLoading = true;
+  String? _error;
+
+  late final String _sessionId;
+  late int _currentStep;
+  late String _question;
+  late String _questionAudioUrl;
+
+  // 动态消息列表（从后端 history 初始化）
+  final List<ChatMessage> _messages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    final start = widget.startData;
+    _sessionId = (start['session_id'] ?? '').toString();
+    _currentStep = int.tryParse((start['current_step'] ?? 1).toString()) ?? 1;
+    _question = (start['question'] ?? '').toString();
+    _questionAudioUrl = (start['question_audio_url'] ?? '').toString();
+
+    _init();
+  }
+
+  Future<void> _init() async {
+    await _fetchHistory();
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_questionAudioUrl.isNotEmpty) {
+        _playAudio(_questionAudioUrl);
+      }
+    });
+  }
+
+  Future<void> _fetchHistory() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+      _messages.clear();
+    });
+    try {
+      final uri =
+          Uri.parse('$_apiBaseUrl/api/v1/scene/session/$_sessionId/history');
+      final res = await http.get(uri);
+      final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+      if (decoded['code'] != 200) {
+        throw Exception(decoded['message'] ?? '加载历史失败');
+      }
+      final data = decoded['data'] as Map<String, dynamic>;
+      final list = data['messages'];
+      final messages = list is List ? list : <dynamic>[];
+
+      final built = <ChatMessage>[];
+      for (final item in messages) {
+        if (item is! Map) continue;
+        final m = Map<String, dynamic>.from(item);
+        final userText = (m['user_text'] ?? '').toString();
+        final userAudioUrl = (m['user_audio_url'] ?? '').toString();
+        final aiText = (m['ai_reply_text'] ?? '').toString();
+        final aiAudioUrl = (m['ai_audio_url'] ?? '').toString();
+        final translation = (m['translation'] ?? '').toString();
+
+        if (userText.isNotEmpty) {
+          built.add(
+            ChatMessage(
+              isUser: true,
+              message: userText,
+              translation: translation,
+              avatarUrl: _userAvatarUrl,
+              audioUrl: userAudioUrl,
+            ),
+          );
+        }
+        if (aiText.isNotEmpty) {
+          built.add(
+            ChatMessage(
+              isUser: false,
+              message: aiText,
+              translation: '',
+              avatarUrl: _aiAvatarUrl,
+              audioUrl: aiAudioUrl,
+            ),
+          );
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _messages.addAll(built);
+        // 如果历史为空，先展示当前问题
+        if (_messages.isEmpty && _question.isNotEmpty) {
+          _messages.add(
+            ChatMessage(
+              isUser: false,
+              message: _question,
+              translation: '',
+              avatarUrl: _aiAvatarUrl,
+              audioUrl: _questionAudioUrl,
+            ),
+          );
+        }
+        _isLoading = false;
+      });
+      _scrollToBottom();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -84,13 +177,14 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
 
   // 新增：播放音频的核心方法
   Future<void> _playAudio(String url) async {
+    if (url.isEmpty) return;
     try {
       // 每次播放前先停止上一条可能还在播放的语音，防止声音重叠
       await _audioPlayer.stop();
       // 直接播放网络 URL
       await _audioPlayer.play(UrlSource(url));
     } catch (e) {
-      print("播放音频失败: $e");
+      debugPrint("播放音频失败: $e");
     }
   }
 
@@ -133,32 +227,61 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
       body: Stack(
         children: [
           // 聊天内容区域
-          ListView.separated(
-            controller: _scrollController, // 绑定控制器！
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 160),
-            itemCount: _messages.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 24),
-            itemBuilder: (context, index) {
-              final msg = _messages[index];
-              if (msg.isUser) {
-                return _buildUserBubble(
-                  context,
-                  message: msg.message,
-                  translation: msg.translation,
-                  avatarUrl: msg.avatarUrl,
-                  audioUrl: msg.audioUrl,
-                );
-              } else {
-                return _buildAiBubble(
-                  context,
-                  message: msg.message,
-                  translation: msg.translation,
-                  avatarUrl: msg.avatarUrl,
-                  audioUrl: msg.audioUrl,
-                );
-              }
-            },
-          ),
+          if (_isLoading)
+            const Center(
+              child: CircularProgressIndicator(color: Color(0xFF3D6620)),
+            )
+          else if (_error != null)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.black.withOpacity(0.6)),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: _fetchHistory,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF3D6620),
+                      ),
+                      child: const Text('重试'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              controller: _scrollController, // 绑定控制器！
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 160),
+              itemCount: _messages.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 24),
+              itemBuilder: (context, index) {
+                final msg = _messages[index];
+                if (msg.isUser) {
+                  return _buildUserBubble(
+                    context,
+                    message: msg.message,
+                    translation: msg.translation,
+                    avatarUrl: msg.avatarUrl,
+                    audioUrl: msg.audioUrl,
+                  );
+                } else {
+                  return _buildAiBubble(
+                    context,
+                    message: msg.message,
+                    translation: msg.translation,
+                    avatarUrl: msg.avatarUrl,
+                    audioUrl: msg.audioUrl,
+                  );
+                }
+              },
+            ),
           // 底部录音区域
           _buildBottomActionArea(),
         ],
@@ -178,8 +301,8 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Greeting',
+          Text(
+            widget.title,
             style: TextStyle(
               color: Colors.black,
               fontSize: 18,
@@ -187,7 +310,7 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
             ),
           ),
           Text(
-            '学习如何打招呼',
+            '${widget.subtitle}',
             style: TextStyle(
               color: Colors.black.withOpacity(0.5),
               fontSize: 12,
