@@ -277,10 +277,13 @@ class _SmartReportPageState extends State<SmartReportPage> {
                 children: [
                   Text(
                     '口语能力分析',
-                    style: GoogleFonts.plusJakartaSans(
+                    style: TextStyle(
+                      fontFamily: 'Alimama ShuHeiTi',
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF3D6620),
+                      fontWeight: FontWeight.w700,
+                      height: 1.0,  
+                      letterSpacing: 0,
+                      color: Color(0xFF5CA54E),
                     ),
                   ),
                   Container(
@@ -289,15 +292,18 @@ class _SmartReportPageState extends State<SmartReportPage> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFDC003),
+                      color: const Color(0xFFFCC524),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       '本周表现不错！',
-                      style: GoogleFonts.beVietnamPro(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF553E00),
+                      style: TextStyle(
+                        fontFamily: 'PingFang SC',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        height: 1.0,
+                        letterSpacing: 0,
+                        color: Color(0xFFFFA100),
                       ),
                     ),
                   ),
@@ -321,25 +327,29 @@ class _SmartReportPageState extends State<SmartReportPage> {
                           Alignment.topCenter,
                           '准确度',
                           'ACCURACY',
-                          isActive: true,
+                          isActive: _accuracyScore > 0,
+                          isLocked: _accuracyScore == 0,
                         ),
                         _buildRadarLabel(
                           Alignment.bottomCenter,
                           '完整度',
                           'INTEGRITY',
-                          isLocked: true,
+                          isActive: _integrityScore > 0,
+                          isLocked: _integrityScore == 0,
                         ),
                         _buildRadarLabel(
                           Alignment.centerLeft,
                           '流畅度',
                           'FLUENCY',
-                          isLocked: true,
+                          isActive: _fluencyScore > 0,
+                          isLocked: _fluencyScore == 0,
                         ),
                         _buildRadarLabel(
                           Alignment.centerRight,
                           '标准度',
                           'STANDARD',
-                          isLocked: true,
+                          isActive: _standardScore > 0,
+                          isLocked: _standardScore == 0,
                         ),
                       ],
                     ),
@@ -351,10 +361,10 @@ class _SmartReportPageState extends State<SmartReportPage> {
           Positioned(
             top: -30,
             right: -30,
-            child: Image.network(
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuDZH3fRVC1EUijMA0sS_TtHQ77090RZqTt0WPRl9z2bJYcEgciNZW2Rko4fNpFIujxSw9f7f02NhWT5qfwDC2Lb7DOQg05Q_iEl3EuLNGLq1rFm449ZLy8nLnk8aU46nVwvG18gyEnlP2KAmD9POhTf0hs6DbETXWCYxX05f6dwcm98AKLwtburK9PoBxvAkokxjghz3IIXDWownA2RgeTviZXipHSXjWF2Fagg9VqOyP1QeVrmzO8obesQ84L_695OScv3ot5V19Wh',
-              width: 80,
-              height: 80,
+            child: Image.asset(
+              "assets/images/radarDragon.png",
+              width: 76,
+              height: 81,
             ),
           ),
         ],
@@ -377,30 +387,40 @@ class _SmartReportPageState extends State<SmartReportPage> {
           if (alignment == Alignment.bottomCenter) const SizedBox(height: 160),
           Text(
             title,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
+            style: TextStyle(
+              fontFamily: 'PingFang SC',
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+              height: 1.0,
+              letterSpacing: 0,
               color: isActive
-                  ? const Color(0xFF3D6620)
-                  : const Color(0xFF73786F).withOpacity(isLocked ? 0.5 : 1),
-            ),
+                  ? Color(0xFF000000)
+                  : Color(0xFF73786F).withOpacity(isLocked ? 0.5 : 1),
+            )
           ),
           Text(
             subtitle,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
-              color: const Color(0xFF73786F).withOpacity(isLocked ? 0.5 : 1),
+            style: TextStyle(
+              fontFamily: 'Alimama FangYuanTi VF',
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0,
+              height: 1.0,
+              color: isActive
+                  ? Color(0xFF000000)
+                  : Color(0xFF73786F).withOpacity(isLocked ? 0.5 : 1),
             ),
           ),
           if (isLocked)
             Text(
               '练句子题解锁',
-              style: GoogleFonts.beVietnamPro(
-                fontSize: 8,
-                fontStyle: FontStyle.italic,
-                color: const Color(0xFFA9AFA4),
+              style: TextStyle(
+                fontFamily: 'PingFang SC',
+                fontSize: 10,
+                fontWeight: FontWeight.w400,
+                height: 1.0,
+                letterSpacing: 0,
+                color: Color(0xFF73786F),
               ),
             ),
         ],
@@ -431,11 +451,14 @@ class _SmartReportPageState extends State<SmartReportPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '本周学习活跃度',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF2B3028),
+                    '小朋友在本周的学习中:',
+                    style: TextStyle(
+                      fontFamily: 'PingFang SC',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      height: 1.0,
+                      letterSpacing: 0,
+                      color: Color(0xFF000000),
                     ),
                   ),
                   Container(
@@ -448,10 +471,10 @@ class _SmartReportPageState extends State<SmartReportPage> {
                   ),
                 ],
               ),
-              Image.network(
-                'https://lh3.googleusercontent.com/aida-public/AB6AXuApMYjZFj1tVtqK18BpVI74GWPY94FfbeiqiTjBBeReYoX-9utiZA7tOZrJ3HjCN1mtmBJcuDeZYC1WpwqZfQlHsEK0yvg1GYzqWbajVFKriG501SJO86a2qL9MFKZYWI8pw0W_3eB0G5w3vqD8KVccFYYOhFmQIsLBuWlOcOAKL7m6txxJdRsN-vkLe3DI0PrxXOsbmzOGZEZOH5D-1MHLmECGai-MQCCNrhAFcA89-BJPxMJP0HopcjDoF_POUhen_ZgY6_o3EHCC',
-                width: 48,
-                height: 48,
+              Image.asset(
+                "assets/images/activityDragon.png",
+                width: 104,
+                height: 98,
               ),
             ],
           ),
@@ -470,37 +493,47 @@ class _SmartReportPageState extends State<SmartReportPage> {
     return Row(
       children: [
         Container(
-          width: 8,
-          height: 8,
+          width: 9,
+          height: 9,
           decoration: const BoxDecoration(
-            color: Color(0xFF874D00),
+            color: Color(0xFFFFC524),
             shape: BoxShape.circle,
           ),
         ),
         const SizedBox(width: 12),
         Text(
           label,
-          style: GoogleFonts.beVietnamPro(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: const Color(0xFF585D54),
+          style: TextStyle(
+            fontFamily: 'PingFang SC',
+            fontSize: 12,
+            fontWeight: FontWeight.w300,
+            height: 1.0,
+            letterSpacing: 0,
+            color: Color(0xFF000000),
           ),
         ),
         const Spacer(),
         Text(
           value,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: const Color(0xFF3D6620),
+          style: TextStyle(
+            fontFamily: 'Potta One',
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            height: 1.0,
+            letterSpacing: 0,
+            color: Color(0xFF96D96C),
           ),
         ),
         const SizedBox(width: 4),
         Text(
           unit,
-          style: GoogleFonts.beVietnamPro(
-            fontSize: 14,
-            color: const Color(0xFF585D54),
+          style: TextStyle(
+            fontFamily: 'PingFang SC',
+            fontSize: 12,
+            fontWeight: FontWeight.w300,
+            height: 1.0,
+            letterSpacing: 0,
+            color: Color(0xFF000000),
           ),
         ),
       ],
