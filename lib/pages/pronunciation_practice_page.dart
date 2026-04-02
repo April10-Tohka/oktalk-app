@@ -57,6 +57,8 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
   late int _itemIndex;
   late int _totalItems;
 
+  late final String _practiceType;
+
   // 接口返回的数据
   bool _hasResult = false;
   int _stars = 0;
@@ -73,6 +75,11 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
     _type = widget.type;
     _topic = widget.topic;
 
+    if(_type=="word"){
+      _practiceType="单词";
+    }else if(_type=="sentence"){
+      _practiceType="句子";
+    }
     _content = (_currentItem['content'] ?? '').toString();
     _standardAudioUrl = (_currentItem['standard_audio_url'] ?? '').toString();
     _itemIndex = int.tryParse((_currentItem['item_index'] ?? 0).toString()) ?? 0;
@@ -458,7 +465,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
             ),
           ),
           Text(
-            '$_topic - $_type Practice',
+            '$_topic - $_practiceType练习',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -548,8 +555,8 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
                 ),
                 label: Text(
                   _isPlayingStandard
-                      ? 'Stop Standard Audio'
-                      : 'Play Standard Audio',
+                      ? '停止播放'
+                      : '播放标准音频',
                   style: const TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.bold,
@@ -620,7 +627,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
         ),
         const SizedBox(height: 12),
         Text(
-          _isRecording ? 'RECORDING...' : 'HOLD TO SPEAK',
+          _isRecording ? '正在录音...' : '按住说话',
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
