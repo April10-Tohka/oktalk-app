@@ -129,7 +129,7 @@ class _ScenceSelectPageState extends State<ScenceSelectPage> {
                       const SizedBox(height: 32),
                       // 3. 标题部分
                       const Text(
-                        'Choose a Scenario',
+                        '选择一个场景',
                         style: TextStyle(
                           fontSize: 36,
                           fontWeight: FontWeight.w900,
@@ -139,7 +139,7 @@ class _ScenceSelectPageState extends State<ScenceSelectPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Select a topic to start chatting',
+                        '选择一个主题开始对话',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.white.withOpacity(0.5),
