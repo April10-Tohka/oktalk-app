@@ -1,807 +1,1088 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
-
-// --- Mock Data Models based on Go Backend ---
-class ReportMVPResponse {
-  final String reportId;
-  final String reportType;
-  final String periodStartDate;
-  final String periodEndDate;
-  final ActivityStats activityStats;
-  final AbilityRadar abilityRadar;
-  final ProgressStats progressStats;
-  final KidFriendlyCard kidFriendlyCard;
-  final List<DifficultWord> difficultWords;
-  final FullReport fullReport;
-
-  ReportMVPResponse({
-    required this.reportId,
-    required this.reportType,
-    required this.periodStartDate,
-    required this.periodEndDate,
-    required this.activityStats,
-    required this.abilityRadar,
-    required this.progressStats,
-    required this.kidFriendlyCard,
-    required this.difficultWords,
-    required this.fullReport,
-  });
-}
-
-class ActivityStats {
-  final int conversationCount;
-  final int evaluationCount;
-  final int totalMinutes;
-  final int activeDays;
-
-  ActivityStats({
-    required this.conversationCount,
-    required this.evaluationCount,
-    required this.totalMinutes,
-    required this.activeDays,
-  });
-}
-
-class AbilityRadar {
-  final double accuracyScore;
-  final double fluencyScore;
-  final double integrityScore;
-  final String summary;
-
-  AbilityRadar({
-    required this.accuracyScore,
-    required this.fluencyScore,
-    required this.integrityScore,
-    required this.summary,
-  });
-}
-
-class ProgressStats {
-  final int overallScoreChange;
-  final double previousScore;
-  final double currentScore;
-  final List<String> highlights;
-  final String levelImprovement;
-
-  ProgressStats({
-    required this.overallScoreChange,
-    required this.previousScore,
-    required this.currentScore,
-    required this.highlights,
-    required this.levelImprovement,
-  });
-}
-
-class KidFriendlyCard {
-  final String encouragementText;
-  final List<String> highlights;
-  final String smallGoal;
-
-  KidFriendlyCard({
-    required this.encouragementText,
-    required this.highlights,
-    required this.smallGoal,
-  });
-}
-
-class DifficultWord {
-  final String word;
-  final int frequency;
-  final String demoAudioUrl;
-
-  DifficultWord({
-    required this.word,
-    required this.frequency,
-    required this.demoAudioUrl,
-  });
-}
-
-class FullReport {
-  final String periodSummary;
-  final String abilityAnalysis;
-  final String progressHighlight;
-  final List<String> improvementAreas;
-  final List<String> recommendations;
-  final String fullText;
-
-  FullReport({
-    required this.periodSummary,
-    required this.abilityAnalysis,
-    required this.progressHighlight,
-    required this.improvementAreas,
-    required this.recommendations,
-    required this.fullText,
-  });
-}
+import 'dart:convert';
+import 'dart:math' as math;
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:audioplayers/audioplayers.dart';
 
 class SmartReportPage extends StatefulWidget {
-  const SmartReportPage({Key? key}) : super(key: key);
+  const SmartReportPage({super.key});
 
   @override
   State<SmartReportPage> createState() => _SmartReportPageState();
 }
 
 class _SmartReportPageState extends State<SmartReportPage> {
-  late ReportMVPResponse _mockData;
+  static const String _apiBaseUrl = String.fromEnvironment(
+    'OKTALK_API_BASE_URL',
+    defaultValue: 'http://10.0.2.2:8080',
+  );
+
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
+  bool _loading = true;
+  String? _error;
+
+  String _weekStart = '';
+  String _weekEnd = '';
+  int _evaluationCount = 0;
+  int _conversationCount = 0;
+  int _persistenceDays = 0;
+
+  int _accuracyScore = 0;
+  int _fluencyScore = 0;
+  int _integrityScore = 0;
+  int _standardScore = 0;
+
+  dynamic _hardWords; // null or list
+
+  int _scenePassRate = 0;
+  int _completedScenes = 0;
+
+  String _encourageText = '';
+
+  String _fullSummary = '';
+  List<String> _strengths = [];
+  List<String> _improvements = [];
 
   @override
   void initState() {
     super.initState();
-    _mockData = _getMockData();
+    _fetchReport();
   }
 
-  ReportMVPResponse _getMockData() {
-    return ReportMVPResponse(
-      reportId: 'REP-202402',
-      reportType: 'weekly',
-      periodStartDate: '2024-02-12',
-      periodEndDate: '2024-02-18',
-      activityStats: ActivityStats(
-        conversationCount: 12,
-        evaluationCount: 8,
-        totalMinutes: 45,
-        activeDays: 5,
-      ),
-      abilityRadar: AbilityRadar(
-        accuracyScore: 75,
-        fluencyScore: 82,
-        integrityScore: 88,
-        summary: "整体表现很棒！",
-      ),
-      progressStats: ProgressStats(
-        overallScoreChange: 7,
-        previousScore: 75,
-        currentScore: 82,
-        highlights: ["流利度提升 +8 分", "S/A 级增加 3 次"],
-        levelImprovement: "S/A 级评测增加 3 次",
-      ),
-      kidFriendlyCard: KidFriendlyCard(
-        encouragementText: "这周你更敢开口了，真棒！",
-        highlights: ["流利度提升", "发音更清晰"],
-        smallGoal: "每天跟读 5 分钟",
-      ),
-      difficultWords: [
-        DifficultWord(
-          word: "apples",
-          frequency: 3,
-          demoAudioUrl: "https://example.com/audio/apples.mp3",
-        ),
-        DifficultWord(
-          word: "banana",
-          frequency: 2,
-          demoAudioUrl: "https://example.com/audio/banana.mp3",
-        ),
-      ],
-      fullReport: FullReport(
-        periodSummary: "本周英语学习积极性很高，对话流利度有显著提升。",
-        abilityAnalysis: "在日常问候场景中表达准确，但在复合句的语法运用上稍微有些犹豫。",
-        progressHighlight: "敢于尝试长句表达，这是非常大的进步！",
-        improvementAreas: ["需加强部分元音的发音", "词汇量需要进一步扩充"],
-        recommendations: ["建议每天坚持阅读简单的英语绘本", "可以多看一些原声英文动画片磨耳朵"],
-        fullText:
-            "小朋友在本周的学习中表现出了极大的热情。不仅完成了所有的日常打卡任务，还在模拟对话中勇敢尝试了许多新词汇。虽然在部分复杂句型上还有提升空间，但这种积极开口的态度非常值得肯定！继续保持对英语的好奇心，下周我们一起来挑战更多的趣味场景吧！",
-      ),
-    );
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  String _formatDate(String raw) {
+    // raw: 2026-03-30 -> 2026/3/30
+    final parts = raw.split('-');
+    if (parts.length != 3) return raw;
+    final y = parts[0];
+    final m = int.tryParse(parts[1]) ?? parts[1];
+    final d = int.tryParse(parts[2]) ?? parts[2];
+    return '$y/$m/$d';
+  }
+
+  Future<void> _fetchReport() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final uri = Uri.parse('$_apiBaseUrl/api/v1/report/generate');
+      final res = await http.post(uri);
+      final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+      if (decoded['code'] != 200) {
+        throw Exception(decoded['message'] ?? '生成报告失败');
+      }
+
+      final outerData = decoded['data'] as Map<String, dynamic>;
+      final reportData = (outerData['data'] ?? {}) as Map<String, dynamic>;
+
+      final activity = (reportData['activity'] ?? {}) as Map<String, dynamic>;
+      final radar = (reportData['radar'] ?? {}) as Map<String, dynamic>;
+      final scene = (reportData['scene'] ?? {}) as Map<String, dynamic>;
+      final encourage = (reportData['encourage'] ?? {}) as Map<String, dynamic>;
+      final fullReport =
+          (reportData['full_report'] ?? {}) as Map<String, dynamic>;
+
+      final strengthsRaw = fullReport['strengths'];
+      final improvementsRaw = fullReport['improvements'];
+
+      if (!mounted) return;
+      setState(() {
+        _weekStart = _formatDate((reportData['week_start'] ?? '').toString());
+        _weekEnd = _formatDate((reportData['week_end'] ?? '').toString());
+
+        _evaluationCount =
+            int.tryParse((activity['evaluation_count'] ?? 0).toString()) ?? 0;
+        _conversationCount =
+            int.tryParse((activity['conversation_count'] ?? 0).toString()) ?? 0;
+        _persistenceDays =
+            int.tryParse((activity['persistence_days'] ?? 0).toString()) ?? 0;
+
+        _accuracyScore =
+            int.tryParse((radar['accuracy_score'] ?? 0).toString()) ?? 0;
+        _fluencyScore =
+            int.tryParse((radar['fluency_score'] ?? 0).toString()) ?? 0;
+        _integrityScore =
+            int.tryParse((radar['integrity_score'] ?? 0).toString()) ?? 0;
+        _standardScore =
+            int.tryParse((radar['standard_score'] ?? 0).toString()) ?? 0;
+
+        _hardWords = reportData['hard_words'];
+
+        _scenePassRate =
+            int.tryParse((scene['pass_rate'] ?? 0).toString()) ?? 0;
+        _completedScenes =
+            int.tryParse((scene['completed_scenes'] ?? 0).toString()) ?? 0;
+
+        _encourageText = (encourage['encourage_text'] ?? '').toString();
+
+        _fullSummary = (fullReport['summary'] ?? '').toString();
+        _strengths = strengthsRaw is List
+            ? strengthsRaw.map((e) => e.toString()).toList()
+            : <String>[];
+        _improvements = improvementsRaw is List
+            ? improvementsRaw.map((e) => e.toString()).toList()
+            : <String>[];
+
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Background Diffused 빛 (Blur bubbles)
-          Positioned.fill(
-            child: Stack(
-              children: [
-                Positioned(
-                  left: -4,
-                  top: 0,
-                  child: Container(
-                    width: 396,
-                    height: 852,
-                    color: const Color(0xFFFFF8BF).withOpacity(0.5),
-                  ),
-                ),
-                Positioned(
-                  left: -4,
-                  top: 0,
-                  child: Container(
-                    width: 396,
-                    height: 852,
-                    color: const Color(0xFFD9F266).withOpacity(0.2),
-                  ),
-                ),
-                // Emulated large blurred ellipses
-                Positioned(
-                  left: -56.4,
-                  top: 197.71,
-                  child: _buildBlurNode(
-                    474.82,
-                    490.55,
-                    const Color(0xFFF5F5F5),
-                  ),
-                ),
-                Positioned(
-                  left: 129.36,
-                  top: -36.97,
-                  child: _buildBlurNode(
-                    436.19,
-                    493.47,
-                    const Color(0xFFECFFE5),
-                  ),
-                ),
-                Positioned(
-                  left: -145.75,
-                  top: -3.56,
-                  child: _buildBlurNode(
-                    453.99,
-                    363.94,
-                    const Color(0xFFFFF5D6),
-                  ),
-                ),
-                Positioned(
-                  left: 150.15,
-                  top: 477.17,
-                  child: _buildBlurNode(417.85, 411.8, const Color(0xFFDAFFA7)),
-                ),
-                Positioned(
-                  left: -180,
-                  top: 516.95,
-                  child: _buildBlurNode(
-                    409.78,
-                    353.86,
-                    const Color(0xFFE9F4BC),
-                  ),
-                ),
-              ],
+      backgroundColor: const Color(0xFFFDFEF5),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF755700)),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '学习报告',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: const Color.fromARGB(255, 0, 0, 0),
+              ),
             ),
-          ),
-
-          SafeArea(
-            child: Column(
-              children: [
-                _buildAppBar(),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    children: [
-                      _buildRadarCard(),
-                      const SizedBox(height: 16),
-                      _buildActivityCard(),
-                      const SizedBox(height: 16),
-                      _buildProgressCard(),
-                      const SizedBox(height: 16),
-                      _buildDifficultWordsCard(),
-                      const SizedBox(height: 16),
-                      _buildFullReportCard(),
-                      const SizedBox(height: 34),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBlurNode(double width, double height, Color color) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
-        child: Container(color: Colors.transparent),
-      ),
-    );
-  }
-
-  Widget _buildAppBar() {
-    return Container(
-      height: 88,
-      padding: const EdgeInsets.only(top: 10, left: 8, right: 16),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.arrow_back_ios,
-                  color: Color(0xFF0B3D03),
-                ),
-                onPressed: () => Navigator.pop(context),
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.chat_bubble_outline,
-                  color: Color(0xFF0B3D03),
-                ),
-                onPressed: () {},
-              ),
-            ],
-          ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                '学习报告',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '\${_mockData.periodStartDate} - \${_mockData.periodEndDate}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w300,
-                  color: Color(0xFF878787),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- Card 1: Radar Chart (Modified for 3 dimensions per spec) ---
-  Widget _buildRadarCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.05),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '口语智能分析',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF5CA54E),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFFFFC524), width: 2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  _mockData.abilityRadar.summary,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFFFFA200),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 220,
-            child: Stack(
-              children: [
-                RadarChart(
-                  RadarChartData(
-                    tickCount: 3,
-                    ticksTextStyle: const TextStyle(color: Colors.transparent),
-                    titlePositionPercentageOffset: 0.2,
-                    dataSets: [
-                      RadarDataSet(
-                        fillColor: const Color(0xFFEAF587).withOpacity(0.5),
-                        borderColor: const Color(0xFFBAE42E),
-                        entryRadius: 4,
-                        dataEntries: [
-                          RadarEntry(
-                            value: _mockData.abilityRadar.accuracyScore,
-                          ),
-                          RadarEntry(
-                            value: _mockData.abilityRadar.fluencyScore,
-                          ),
-                          RadarEntry(
-                            value: _mockData.abilityRadar.integrityScore,
-                          ),
-                        ],
-                      ),
-                    ],
-                    getTitle: (index, angle) {
-                      switch (index) {
-                        case 0:
-                          return const RadarChartTitle(text: '准确度\nAccuracy');
-                        case 1:
-                          return const RadarChartTitle(text: '流利度\nFluency');
-                        case 2:
-                          return const RadarChartTitle(text: '完整度\nIntegrity');
-                        default:
-                          return const RadarChartTitle(text: '');
-                      }
-                    },
-                  ),
-                ),
-                // Mocking the dragon icon in top right
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Image.asset(
-                    'assets/images/3Ddragon.png',
-                    width: 60,
-                    height: 60,
-                    errorBuilder: (_, __, ___) =>
-                        const Icon(Icons.pets, color: Colors.orange),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- Card 2: Activity Stats (2x2 grid) ---
-  Widget _buildActivityCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.05),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 6,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '小朋友在本周的学习中：',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildActivityRow(
-                  '对话次数: \${_mockData.activityStats.conversationCount} 次',
-                ),
-                _buildActivityRow(
-                  '评测次数: \${_mockData.activityStats.evaluationCount} 次',
-                ),
-                _buildActivityRow(
-                  '学习时长: \${_mockData.activityStats.totalMinutes} 分钟',
-                ),
-                _buildActivityRow(
-                  '活跃天数: \${_mockData.activityStats.activeDays} 天',
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 4,
-            child: Image.asset(
-              'assets/images/3Ddragon.png',
-              height: 100,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) =>
-                  const Icon(Icons.pets, size: 80, color: Colors.orange),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActivityRow(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Row(
-        children: [
-          const CircleAvatar(radius: 4, backgroundColor: Color(0xFFFFC524)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
+            Text(
+              _weekStart.isEmpty || _weekEnd.isEmpty
+                  ? '—'
+                  : '$_weekStart ~ $_weekEnd',
+              style: GoogleFonts.beVietnamPro(
                 fontSize: 12,
+                color: const Color(0xFF94A3B8),
                 fontWeight: FontWeight.w300,
-                color: Colors.black,
               ),
             ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_vert, color: Color(0xFF755700)),
+            onPressed: () {},
           ),
         ],
       ),
-    );
-  }
-
-  // --- Card 3: Progress & Goal Card (Using percentage visual style) ---
-  Widget _buildProgressCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.05),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFFDFEF5), Color(0xFFF0FAF0)],
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '本周综合表现',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Container(
-            width: 80,
-            height: 4,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFBC00),
-              borderRadius: BorderRadius.circular(5),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                '\${_mockData.progressStats.currentScore.toInt()}',
-                style: const TextStyle(
-                  fontFamily: 'Potta One', // Fallback if unavailable
-                  fontSize: 36,
-                  color: Color(0xFF96D96C),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Text(
-                ' 分',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF96D96C),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                '(\${_mockData.progressStats.overallScoreChange >= 0 ? ' +
-                    ' : '
-                        '}\${_mockData.progressStats.overallScoreChange} 分)',
-                style: const TextStyle(fontSize: 14, color: Colors.black54),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            _mockData.kidFriendlyCard.encouragementText,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w300,
-              color: Colors.black87,
-            ),
-          ),
-          Text(
-            '小目标: \${_mockData.kidFriendlyCard.smallGoal}',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Colors.orange,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- Card 4: Difficult Words ---
-  Widget _buildDifficultWordsCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.05),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '需加强的单词',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Container(
-            width: 60,
-            height: 4,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFBC00),
-              borderRadius: BorderRadius.circular(5),
-            ),
-          ),
-          const SizedBox(height: 16),
-          ..._mockData.difficultWords.map((wordObj) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF9F9F9),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        child: _loading
+            ? const Center(
+                child: CircularProgressIndicator(color: Color(0xFF3D6620)),
+              )
+            : _error != null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        wordObj.word,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.beVietnamPro(
+                          color: const Color(0xFF585D54),
                         ),
                       ),
-                      Text(
-                        '出现问题次数: \${wordObj.frequency}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: _fetchReport,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF3D6620),
                         ),
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.volume_up, color: Color(0xFF5CA54E)),
-                    onPressed: () {
-                      // Play demo audio
-                      print('Playing audio: \${wordObj.demoAudioUrl}');
-                    },
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ],
-      ),
-    );
-  }
-
-  // --- Card 5: Full Report ---
-  Widget _buildFullReportCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.05),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '家长点评/完整分析',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Container(
-            width: 90,
-            height: 4,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFBC00),
-              borderRadius: BorderRadius.circular(5),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _mockData.fullReport.fullText,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
-              color: Colors.black87,
-              height: 1.6,
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            '学习建议:',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 8),
-          ..._mockData.fullReport.recommendations
-              .map(
-                (rec) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4.0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '• ',
-                        style: TextStyle(color: Colors.orange, fontSize: 16),
-                      ),
-                      Expanded(
-                        child: Text(
-                          rec,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.black87,
-                          ),
-                        ),
+                        child: const Text('重试'),
                       ),
                     ],
                   ),
                 ),
               )
-              .toList(),
+            : SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 24,
+                ),
+                child: Center(
+                  child: Container(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    child: Column(
+                      children: [
+                        _buildRadarCard(),
+                        const SizedBox(height: 24),
+                        _buildActivityStatsCard(),
+                        const SizedBox(height: 24),
+                        _buildAIEngagementCard(),
+                        const SizedBox(height: 24),
+                        _buildScenePerformanceCard(),
+                        const SizedBox(height: 24),
+                        _buildHardWordsCard(),
+                        const SizedBox(height: 24),
+                        _buildSummaryCard(),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildRadarCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '口语能力分析',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF3D6620),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFDC003),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '本周表现不错！',
+                      style: GoogleFonts.beVietnamPro(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF553E00),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: SizedBox(
+                  width: 200,
+                  height: 200,
+                  child: CustomPaint(
+                    painter: RadarChartPainter(
+                      accuracyScore: _accuracyScore,
+                      fluencyScore: _fluencyScore,
+                      integrityScore: _integrityScore,
+                      standardScore: _standardScore,
+                    ),
+                    child: Stack(
+                      children: [
+                        _buildRadarLabel(
+                          Alignment.topCenter,
+                          '准确度',
+                          'ACCURACY',
+                          isActive: true,
+                        ),
+                        _buildRadarLabel(
+                          Alignment.bottomCenter,
+                          '完整度',
+                          'INTEGRITY',
+                          isLocked: true,
+                        ),
+                        _buildRadarLabel(
+                          Alignment.centerLeft,
+                          '流畅度',
+                          'FLUENCY',
+                          isLocked: true,
+                        ),
+                        _buildRadarLabel(
+                          Alignment.centerRight,
+                          '标准度',
+                          'STANDARD',
+                          isLocked: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Positioned(
+            top: -30,
+            right: -30,
+            child: Image.network(
+              'https://lh3.googleusercontent.com/aida-public/AB6AXuDZH3fRVC1EUijMA0sS_TtHQ77090RZqTt0WPRl9z2bJYcEgciNZW2Rko4fNpFIujxSw9f7f02NhWT5qfwDC2Lb7DOQg05Q_iEl3EuLNGLq1rFm449ZLy8nLnk8aU46nVwvG18gyEnlP2KAmD9POhTf0hs6DbETXWCYxX05f6dwcm98AKLwtburK9PoBxvAkokxjghz3IIXDWownA2RgeTviZXipHSXjWF2Fagg9VqOyP1QeVrmzO8obesQ84L_695OScv3ot5V19Wh',
+              width: 80,
+              height: 80,
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Widget _buildRadarLabel(
+    Alignment alignment,
+    String title,
+    String subtitle, {
+    bool isActive = false,
+    bool isLocked = false,
+  }) {
+    return Align(
+      alignment: alignment,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (alignment == Alignment.bottomCenter) const SizedBox(height: 160),
+          Text(
+            title,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: isActive
+                  ? const Color(0xFF3D6620)
+                  : const Color(0xFF73786F).withOpacity(isLocked ? 0.5 : 1),
+            ),
+          ),
+          Text(
+            subtitle,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
+              color: const Color(0xFF73786F).withOpacity(isLocked ? 0.5 : 1),
+            ),
+          ),
+          if (isLocked)
+            Text(
+              '练句子题解锁',
+              style: GoogleFonts.beVietnamPro(
+                fontSize: 8,
+                fontStyle: FontStyle.italic,
+                color: const Color(0xFFA9AFA4),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityStatsCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '本周学习活跃度',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2B3028),
+                    ),
+                  ),
+                  Container(
+                    width: 120,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFDC003).withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ],
+              ),
+              Image.network(
+                'https://lh3.googleusercontent.com/aida-public/AB6AXuApMYjZFj1tVtqK18BpVI74GWPY94FfbeiqiTjBBeReYoX-9utiZA7tOZrJ3HjCN1mtmBJcuDeZYC1WpwqZfQlHsEK0yvg1GYzqWbajVFKriG501SJO86a2qL9MFKZYWI8pw0W_3eB0G5w3vqD8KVccFYYOhFmQIsLBuWlOcOAKL7m6txxJdRsN-vkLe3DI0PrxXOsbmzOGZEZOH5D-1MHLmECGai-MQCCNrhAFcA89-BJPxMJP0HopcjDoF_POUhen_ZgY6_o3EHCC',
+                width: 48,
+                height: 48,
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildStatItem('完成发音练习', '$_evaluationCount', '次'),
+          const SizedBox(height: 16),
+          _buildStatItem('完成场景对话', '$_conversationCount', '次'),
+          const SizedBox(height: 16),
+          _buildStatItem('坚持学习天数', '$_persistenceDays', '天'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, String unit) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: const BoxDecoration(
+            color: Color(0xFF874D00),
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: GoogleFonts.beVietnamPro(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF585D54),
+          ),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF3D6620),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          unit,
+          style: GoogleFonts.beVietnamPro(
+            fontSize: 14,
+            color: const Color(0xFF585D54),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAIEngagementCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFFDC003), width: 2),
+                ),
+                child: ClipOval(
+                  child: Image.network(
+                    'https://lh3.googleusercontent.com/aida-public/AB6AXuAUJRXPGLLy3JOe04o1knDgkcU-NtbgIPi6h1XzpvTOMHmZbckxDecl4XqiUm1bXOkeBmDWZ4IK7eF3zEvLzqSg1Yo9jUuaCCyk1sWp3WjP8LaoDNFepMsCF_mH3sId46KyEc_PDa-nbvEf_b018XTrIz0-9vNpVtitpz7xBmffv_eArrtdMuz_g-4EisZ_jTmC5GmLmgwysr2PBZ9SBPEconESW1FHuAkuxROnJwUKPkCc0oYqMFoHxqVVUx9aO4ezf67PtB86Wacq',
+                    width: 40,
+                    height: 40,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFDC003),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'AI 小助手',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF4B2800),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _encourageText.isEmpty ? '—' : _encourageText,
+                  style: GoogleFonts.beVietnamPro(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: const Color(0xFF4B2800),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: -8,
+                left: 16,
+                child: Transform.rotate(
+                  angle: math.pi / 4,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    color: const Color(0xFFFFF3E0),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScenePerformanceCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '场景对话表现',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF2B3028),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Column(
+                children: [
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 80,
+                        height: 80,
+                        child: CircularProgressIndicator(
+                          value: (_scenePassRate.clamp(0, 100)) / 100.0,
+                          strokeWidth: 8,
+                          backgroundColor: const Color(0xFFEDF3E6),
+                          color: const Color(0xFF3D6620),
+                          strokeCap: StrokeCap.round,
+                        ),
+                      ),
+                      Text(
+                        '${_scenePassRate.clamp(0, 100)}%',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF3D6620),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '一次通过率',
+                    style: GoogleFonts.beVietnamPro(
+                      fontSize: 12,
+                      color: const Color(0xFF73786F),
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Text(
+                        '$_completedScenes',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 40,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF3D6620),
+                        ),
+                      ),
+                      Positioned(
+                        top: -10,
+                        right: -10,
+                        child: const Icon(
+                          Icons.flag,
+                          color: Color(0xFF874D00),
+                          size: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '完成场景数',
+                    style: GoogleFonts.beVietnamPro(
+                      fontSize: 12,
+                      color: const Color(0xFF73786F),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHardWordsCard() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '本周高频难词',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF2B3028),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          if (_hardWords == null) ...[
+            const Text('🎉', style: TextStyle(fontSize: 40)),
+            const SizedBox(height: 12),
+            Text(
+              '本周没有难词！',
+              style: GoogleFonts.beVietnamPro(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF3D6620),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '发音基础很棒，继续保持！',
+              style: GoogleFonts.beVietnamPro(
+                fontSize: 14,
+                color: const Color(0xFF73786F),
+              ),
+            ),
+          ] else ...[
+            ..._buildHardWordsList(_hardWords),
+          ],
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildHardWordsList(dynamic hardWords) {
+    final list = hardWords is List ? hardWords : <dynamic>[];
+    if (list.isEmpty) {
+      return [
+        Text(
+          '暂无难词数据',
+          style: GoogleFonts.beVietnamPro(
+            fontSize: 14,
+            color: const Color(0xFF73786F),
+          ),
+        ),
+      ];
+    }
+
+    return list.asMap().entries.map((entry) {
+      final item = entry.value;
+      final map = item is Map
+          ? Map<String, dynamic>.from(item)
+          : <String, dynamic>{};
+      final word = (map['word'] ?? map['content'] ?? map['text'] ?? '')
+          .toString();
+      final times =
+          int.tryParse(
+            (map['times'] ??
+                    map['practice_times'] ??
+                    map['practice_count'] ??
+                    map['count'] ??
+                    0)
+                .toString(),
+          ) ??
+          0;
+      final audioUrl =
+          (map['audio_url'] ?? map['standard_audio_url'] ?? map['audio'] ?? '')
+              .toString();
+
+      return Padding(
+        padding: EdgeInsets.only(bottom: entry.key == list.length - 1 ? 0 : 12),
+        child: _buildHardWordPill(
+          word: word.isEmpty ? '—' : word,
+          times: times,
+          audioUrl: audioUrl,
+        ),
+      );
+    }).toList();
+  }
+
+  Widget _buildHardWordPill({
+    required String word,
+    required int times,
+    required String audioUrl,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFF3D6620), width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              word,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF2B3028),
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              '练了 $times 次',
+              style: GoogleFonts.beVietnamPro(
+                fontSize: 12,
+                color: const Color(0xFF64748B),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          InkWell(
+            onTap: audioUrl.isEmpty
+                ? null
+                : () async {
+                    await _audioPlayer.stop();
+                    await _audioPlayer.play(UrlSource(audioUrl));
+                  },
+            borderRadius: BorderRadius.circular(999),
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FAF0),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFF3D6620).withOpacity(0.2),
+                ),
+              ),
+              child: Icon(
+                Icons.volume_up,
+                size: 18,
+                color: audioUrl.isEmpty
+                    ? const Color(0xFF94A3B8)
+                    : const Color(0xFF3D6620),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '本周学习总结',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF2B3028),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _fullSummary.isEmpty ? '—' : _fullSummary,
+            style: GoogleFonts.beVietnamPro(
+              fontSize: 14,
+              height: 1.6,
+              color: const Color(0xFF585D54),
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildSummarySection(
+            icon: Icons.check_circle,
+            iconColor: const Color(0xFF3D6620),
+            title: '✅ 本周亮点',
+            items: _strengths.isEmpty ? const ['—'] : _strengths,
+          ),
+          const SizedBox(height: 24),
+          _buildSummarySection(
+            icon: Icons.lightbulb,
+            iconColor: const Color(0xFF874D00),
+            title: '💡 下周目标',
+            items: _improvements.isEmpty ? const ['—'] : _improvements,
+          ),
+          const SizedBox(height: 32),
+          const Divider(color: Color(0xFFEDF3E6)),
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              '报告由 AI 生成，仅供参考',
+              style: GoogleFonts.beVietnamPro(
+                fontSize: 10,
+                color: const Color(0xFFA9AFA4),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummarySection({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required List<String> items,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 16, color: iconColor),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: GoogleFonts.beVietnamPro(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: iconColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.only(left: 24),
+          child: Column(
+            children: items
+                .map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '• ',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF585D54),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            item,
+                            style: GoogleFonts.beVietnamPro(
+                              fontSize: 14,
+                              color: const Color(0xFF585D54),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class RadarChartPainter extends CustomPainter {
+  final int accuracyScore;
+  final int fluencyScore;
+  final int integrityScore;
+  final int standardScore;
+
+  RadarChartPainter({
+    required this.accuracyScore,
+    required this.fluencyScore,
+    required this.integrityScore,
+    required this.standardScore,
+  });
+
+  double _norm(int v) => (v.clamp(0, 100)) / 100.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 * 0.8;
+
+    final gridPaint = Paint()
+      ..color = const Color(0xFFA9AFA4).withOpacity(0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    // 绘制轴线
+    canvas.drawLine(
+      Offset(center.dx, center.dy - radius),
+      Offset(center.dx, center.dy + radius),
+      gridPaint,
+    );
+    canvas.drawLine(
+      Offset(center.dx - radius, center.dy),
+      Offset(center.dx + radius, center.dy),
+      gridPaint,
+    );
+
+    // 绘制背景圆圈
+    canvas.drawCircle(center, radius, gridPaint);
+    canvas.drawCircle(center, radius * 0.5, gridPaint);
+
+    // 绘制数据区域（四维：准确/流畅/完整/标准）
+    final areaPaint = Paint()
+      ..color = const Color(0xFF3D6620).withOpacity(0.2)
+      ..style = PaintingStyle.fill;
+    final borderPaint = Paint()
+      ..color = const Color(0xFF3D6620)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    final a = _norm(accuracyScore);
+    final f = _norm(fluencyScore);
+    final i = _norm(integrityScore);
+    final s = _norm(standardScore);
+
+    final pTop = Offset(center.dx, center.dy - radius * a); // accuracy
+    final pLeft = Offset(center.dx - radius * f, center.dy); // fluency
+    final pBottom = Offset(center.dx, center.dy + radius * i); // integrity
+    final pRight = Offset(center.dx + radius * s, center.dy); // standard
+
+    final path = Path()
+      ..moveTo(pTop.dx, pTop.dy)
+      ..lineTo(pLeft.dx, pLeft.dy)
+      ..lineTo(pBottom.dx, pBottom.dy)
+      ..lineTo(pRight.dx, pRight.dy)
+      ..close();
+
+    canvas.drawPath(path, areaPaint);
+    canvas.drawPath(path, borderPaint);
+
+    // 绘制得分点
+    final dotPaint = Paint()..color = const Color(0xFF3D6620);
+    canvas.drawCircle(pTop, 4, dotPaint);
+    canvas.drawCircle(pLeft, 4, dotPaint);
+    canvas.drawCircle(pBottom, 4, dotPaint);
+    canvas.drawCircle(pRight, 4, dotPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant RadarChartPainter oldDelegate) {
+    return accuracyScore != oldDelegate.accuracyScore ||
+        fluencyScore != oldDelegate.fluencyScore ||
+        integrityScore != oldDelegate.integrityScore ||
+        standardScore != oldDelegate.standardScore;
   }
 }
