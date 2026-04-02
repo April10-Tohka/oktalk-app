@@ -41,7 +41,7 @@ class PracticeTypeScreen extends StatelessWidget {
                         const SizedBox(height: 40),
                         // 3. 标题部分
                         const Text(
-                          'Choose Your\nPractice Type',
+                          '选择练习类型',
                           style: TextStyle(
                             fontSize: 36,
                             fontWeight: FontWeight.w900,
@@ -51,7 +51,7 @@ class PracticeTypeScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Select how you want to practice',
+                          '选择你的练习方式',
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.white.withOpacity(0.6),
@@ -62,7 +62,7 @@ class PracticeTypeScreen extends StatelessWidget {
                         _buildPracticeCard(
                           icon: '📝',
                           title: '单词练习',
-                          subtitle: 'Practice individual words',
+                          subtitle: '练习单个单词',
                           iconBgColor: Colors.amber.withOpacity(0.2),
                           onTap: () {
                             Navigator.push(
@@ -75,7 +75,7 @@ class PracticeTypeScreen extends StatelessWidget {
                         _buildPracticeCard(
                           icon: '💬',
                           title: '句子练习',
-                          subtitle: 'Practice full sentences',
+                          subtitle: '练习完整句子',
                           iconBgColor: Colors.green.withOpacity(0.2),
                           onTap: () {
                             Navigator.push(
@@ -84,42 +84,6 @@ class PracticeTypeScreen extends StatelessWidget {
                             );
                           },
                         ),
-
-                        // // 5. AI Tutor 插图
-                        // // TODO: 后续看情况这个插图需不需要！
-                        // const SizedBox(height: 40),
-                        // Center(
-                        //   child: Stack(
-                        //     alignment: Alignment.center,
-                        //     children: [
-                        //       Container(
-                        //         width: 200,
-                        //         height: 200,
-                        //         decoration: BoxDecoration(
-                        //           shape: BoxShape.circle,
-                        //           boxShadow: [
-                        //             BoxShadow(
-                        //               color: Colors.green.withOpacity(0.15),
-                        //               blurRadius: 100,
-                        //               spreadRadius: 20,
-                        //             ),
-                        //           ],
-                        //         ),
-                        //       ),
-                        //       ClipRRect(
-                        //         borderRadius: BorderRadius.circular(20),
-                        //         child: Image.network(
-                        //           'https://picsum.photos/seed/tutor/400/400',
-                        //           width: 180,
-                        //           height: 180,
-                        //           fit: BoxFit.cover,
-                        //           color: Colors.white.withOpacity(0.8),
-                        //           colorBlendMode: BlendMode.modulate,
-                        //         ),
-                        //       ),
-                        //     ],
-                        //   ),
-                        // ),
                       ],
                     ),
                   ),

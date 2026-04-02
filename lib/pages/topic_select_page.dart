@@ -140,7 +140,7 @@ class _TopicSelectPageState extends State<TopicSelectPage> {
                       const SizedBox(height: 24),
                       // 3. 标题部分
                       const Text(
-                        'Choose a Topic',
+                        '选择一个主题',
                         style: TextStyle(
                           fontSize: 36,
                           fontWeight: FontWeight.w900,
@@ -150,7 +150,7 @@ class _TopicSelectPageState extends State<TopicSelectPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Select a category to start practicing',
+                        '选择一个类别开始练习',
                         style: TextStyle(
                           fontSize: 18,
                           color: Colors.white.withOpacity(0.7),
@@ -320,7 +320,7 @@ class _TopicSelectPageState extends State<TopicSelectPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text(
-                    'Ready for a challenge?',
+                    '准备好挑战了吗？',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800, // 加粗标题
@@ -329,7 +329,7 @@ class _TopicSelectPageState extends State<TopicSelectPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Practice daily to unlock new\nspecial categories!',
+                    '每天进步一点点，成为英语小达人！',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.4, // 增加行高，提升阅读体验
