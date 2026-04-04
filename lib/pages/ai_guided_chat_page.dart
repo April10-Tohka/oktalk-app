@@ -58,10 +58,10 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   final AudioRecorder _audioRecorder = AudioRecorder();
 
-  static const String _aiAvatarUrl =
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBxO0JZA5GxGgzW8WQNz1ntF9xNUg9_SB64QKAXzuxW0ZchX_TLh1THmqKRtX3K1zuP1OOSOXC8bWI9SHefKSi1HYTbixRgPrQNHQ8j7ics6LZEJ0JyDu6ryZ8yjR7LIAfnXrtCiTHDRMNoUOQ38e1vt5amVBz2GigluhwRoq6kQcmQ148JhLnAlX8HvlLPvOJrOo5dj2w3_toZ1syQZCqV0dsiuCH1U2TkQPdXy7dd-3b4mi2n2GnNFvjZQ3X_TD0CoNupirRrHwVk';
-  static const String _userAvatarUrl =
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDzs9GykjnkQeNn73Nyj4ObXT07n-PslY-0aswBKdr0kgxpSFu2jgVCGrugGIlY9eSUR5A5gL2w60AR7fEHx3KGZAZiUxth3YwNf5rzftHddfY5xwxrJGVYqNr1zSrFHHyqufPUqq-cxzRNUQYRSxHsTOq_cVqQfhws2zAU9bFjx5O8kSBJ1Cz_VZlVIJtYNuftkZ3fgCdGiUPnhd_nlL8VrNDazdkalBeUX0WofwAYWnSuxMjTxDy3vnWwDec4tN91F_iJgnDHVn6r';
+  static const String _aiAvatarUrl = 'https://oktalk.oss-cn-heyuan.aliyuncs.com/assets/images/3Ddragon.png';
+  static const String _userAvatarUrl = 'https://oktalk.oss-cn-heyuan.aliyuncs.com/assets/images/default_user_avatar.jpg';
+  static const String _default_ai_avatar= 'assets/images/default_ai_avatar.png';
+  static const String _default_user_avatar= 'assets/images/default_user_avatar.jpg';
 
   bool _isLoading = true;
   String? _error;
@@ -491,7 +491,7 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildAvatar(avatarUrl, const Color(0xFFFDC003)),
+        _buildAvatar(avatarUrl, const Color(0xFFFDC003),isAI: true),
         const SizedBox(width: 12),
         Expanded(
           child: Container(
@@ -636,13 +636,13 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
           ),
         ),
         const SizedBox(width: 12),
-        _buildAvatar(avatarUrl, const Color(0xFFC0F19A)),
+        _buildAvatar(avatarUrl, const Color(0xFFC0F19A),isAI: false),
       ],
     );
   }
 
   // 头像组件 (保持不变)
-  Widget _buildAvatar(String url, Color borderColor) {
+  Widget _buildAvatar(String url, Color borderColor ,{required bool isAI}) {
     return Container(
       width: 48,
       height: 48,
@@ -662,8 +662,10 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
         child: Image.network(
           url,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) =>
-              Icon(Icons.person, color: borderColor),
+          errorBuilder: (context, error, stackTrace) => Image.asset(
+            isAI ? _default_ai_avatar : _default_user_avatar,
+            fit: BoxFit.cover,
+          ),
         ),
       ),
     );
