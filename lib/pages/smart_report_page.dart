@@ -18,6 +18,8 @@ class _SmartReportPageState extends State<SmartReportPage> {
     defaultValue: 'http://8.155.145.36:8080',
   );
 
+  static const String _default_ai_avatar= 'assets/images/default_ai_avatar.png';
+
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   bool _loading = true;
@@ -565,9 +567,16 @@ class _SmartReportPageState extends State<SmartReportPage> {
                 ),
                 child: ClipOval(
                   child: Image.network(
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuAUJRXPGLLy3JOe04o1knDgkcU-NtbgIPi6h1XzpvTOMHmZbckxDecl4XqiUm1bXOkeBmDWZ4IK7eF3zEvLzqSg1Yo9jUuaCCyk1sWp3WjP8LaoDNFepMsCF_mH3sId46KyEc_PDa-nbvEf_b018XTrIz0-9vNpVtitpz7xBmffv_eArrtdMuz_g-4EisZ_jTmC5GmLmgwysr2PBZ9SBPEconESW1FHuAkuxROnJwUKPkCc0oYqMFoHxqVVUx9aO4ezf67PtB86Wacq',
+                    "https://oktalk.oss-cn-heyuan.aliyuncs.com/assets/images/3Ddragon.png",
+                    fit: BoxFit.cover,
                     width: 40,
                     height: 40,
+                    errorBuilder: (context, error, stackTrace) => Image.asset(
+                       _default_ai_avatar ,
+                      fit: BoxFit.cover,
+                      width: 40,
+                      height: 40,
+                    ),
                   ),
                 ),
               ),
@@ -579,7 +588,7 @@ class _SmartReportPageState extends State<SmartReportPage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  'AI 小助手',
+                  'OK AI',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
