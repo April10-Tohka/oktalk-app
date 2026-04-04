@@ -43,7 +43,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
 
   static const String _apiBaseUrl = String.fromEnvironment(
     'OKTALK_API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8080',
+    defaultValue: 'http://8.155.145.36:8080',
   );
 
   // 练习会话核心数据

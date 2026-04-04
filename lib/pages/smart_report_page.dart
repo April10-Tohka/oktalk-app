@@ -15,7 +15,7 @@ class SmartReportPage extends StatefulWidget {
 class _SmartReportPageState extends State<SmartReportPage> {
   static const String _apiBaseUrl = String.fromEnvironment(
     'OKTALK_API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8080',
+    defaultValue: 'http://8.155.145.36:8080',
   );
 
   final AudioPlayer _audioPlayer = AudioPlayer();

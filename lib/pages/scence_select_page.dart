@@ -15,7 +15,7 @@ class ScenceSelectPage extends StatefulWidget {
 class _ScenceSelectPageState extends State<ScenceSelectPage> {
   static const String _apiBaseUrl = String.fromEnvironment(
     'OKTALK_API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8080',
+    defaultValue: 'http://8.155.145.36:8080',
   );
 
   bool _isLoading = true;

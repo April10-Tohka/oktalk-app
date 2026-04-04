@@ -48,7 +48,7 @@ class AiGuidedChatPage extends StatefulWidget {
 class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
   static const String _apiBaseUrl = String.fromEnvironment(
     'OKTALK_API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8080',
+    defaultValue: 'http://8.155.145.36:8080',
   );
 
   // 核心：滚动控制器

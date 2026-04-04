@@ -40,7 +40,7 @@ class _PronunciationSummaryPageState extends State<PronunciationSummaryPage> {
   late final String _randomText;
   static const String _apiBaseUrl = String.fromEnvironment(
     'OKTALK_API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8080',
+    defaultValue: 'http://8.155.145.36:8080',
   );
 
   bool _loading = true;
