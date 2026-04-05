@@ -59,10 +59,14 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   final AudioRecorder _audioRecorder = AudioRecorder();
 
-  static const String _aiAvatarUrl = 'https://oktalk.oss-cn-heyuan.aliyuncs.com/assets/images/3Ddragon.png';
-  static const String _userAvatarUrl = 'https://oktalk.oss-cn-heyuan.aliyuncs.com/assets/images/default_user_avatar.jpg';
-  static const String _default_ai_avatar= 'assets/images/default_ai_avatar.png';
-  static const String _default_user_avatar= 'assets/images/default_user_avatar.jpg';
+  static const String _aiAvatarUrl =
+      'https://oktalk.oss-cn-heyuan.aliyuncs.com/assets/images/3Ddragon.png';
+  static const String _userAvatarUrl =
+      'https://oktalk.oss-cn-heyuan.aliyuncs.com/assets/images/default_user_avatar.jpg';
+  static const String _default_ai_avatar =
+      'assets/images/default_ai_avatar.png';
+  static const String _default_user_avatar =
+      'assets/images/default_user_avatar.jpg';
 
   bool _isLoading = true;
   String? _error;
@@ -106,8 +110,9 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
       _messages.clear();
     });
     try {
-      final uri =
-          Uri.parse('$_apiBaseUrl/api/v1/scene/session/$_sessionId/history');
+      final uri = Uri.parse(
+        '$_apiBaseUrl/api/v1/scene/session/$_sessionId/history',
+      );
       final res = await http.get(uri);
       final decoded = jsonDecode(res.body) as Map<String, dynamic>;
       if (decoded['code'] != 200) {
@@ -220,9 +225,9 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
       status = await Permission.microphone.request();
       if (!status.isGranted) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('需要麦克风权限才能录音')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('需要麦克风权限才能录音')));
         return;
       }
     }
@@ -274,6 +279,8 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
       ),
     );
 
+    bool isCompleted = false;
+
     try {
       final uri = Uri.parse('$_apiBaseUrl/api/v1/scene/session/next');
       final req = http.MultipartRequest('POST', uri);
@@ -298,10 +305,10 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
       final sceneCompleted = data['scene_completed'] == true;
       final currentStep =
           int.tryParse((data['current_step'] ?? _currentStep).toString()) ??
-              _currentStep;
+          _currentStep;
       final nextQuestion = (data['next_question'] ?? '').toString();
-      final nextQuestionAudioUrl =
-          (data['next_question_audio_url'] ?? '').toString();
+      final nextQuestionAudioUrl = (data['next_question_audio_url'] ?? '')
+          .toString();
 
       if (!mounted) return;
       // 1. 先添加用户消息和 AI 回复消息到界面
@@ -337,11 +344,8 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
         await _playAudio(aiAudioUrl);
       }
 
-
-      // 3. 等 AI 回复音频播放完成后，如果 stepAdvanced 为 true，再添加并播放下一个问题
-      if (stepAdvanced &&
-          nextQuestion.isNotEmpty &&
-          nextQuestionAudioUrl.isNotEmpty) {
+      // 3. 等 AI 回复音频播放完成后，再添加并播放下一个问题
+      if (nextQuestion.isNotEmpty && nextQuestionAudioUrl.isNotEmpty) {
         if (!mounted) return;
         setState(() {
           _question = nextQuestion;
@@ -361,30 +365,35 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
         await _playAudio(nextQuestionAudioUrl);
       }
 
-      // 4. 等所有音频播放完成后，如果 sceneCompleted 为 true，跳转到总结页面
+      // 4. 如果 sceneCompleted 为 true，记录状态并停止播放器
       if (sceneCompleted) {
+        debugPrint("查看sceneComplete:$sceneCompleted");
         await _audioPlayer.stop();
-        if (!mounted) return;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => GuidedChatSummaryPage(
-              sessionId: _sessionId,
-              title: widget.title,
-            ),
-          ),
-        );
+        isCompleted = true;
       }
     } catch (e) {
       debugPrint('调用 next 失败: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('发送失败：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('发送失败：$e')));
     } finally {
       if (mounted) {
         Navigator.pop(context);
         setState(() => _isRequesting = false);
       }
+    }
+
+    // 5. 在弹窗关闭后，执行页面跳转
+    if (isCompleted && mounted) {
+      debugPrint("页面跳转到GuidedChatSummaryPage,传递的参数为$_sessionId");
+      debugPrint(widget.title);
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) =>
+              GuidedChatSummaryPage(sessionId: _sessionId, title: widget.title),
+        ),
+      );
     }
   }
 
@@ -515,7 +524,7 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildAvatar(avatarUrl, const Color(0xFFFDC003),isAI: true),
+        _buildAvatar(avatarUrl, const Color(0xFFFDC003), isAI: true),
         const SizedBox(width: 12),
         Expanded(
           child: Container(
@@ -660,13 +669,13 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
           ),
         ),
         const SizedBox(width: 12),
-        _buildAvatar(avatarUrl, const Color(0xFFC0F19A),isAI: false),
+        _buildAvatar(avatarUrl, const Color(0xFFC0F19A), isAI: false),
       ],
     );
   }
 
   // 头像组件 (保持不变)
-  Widget _buildAvatar(String url, Color borderColor ,{required bool isAI}) {
+  Widget _buildAvatar(String url, Color borderColor, {required bool isAI}) {
     return Container(
       width: 48,
       height: 48,
