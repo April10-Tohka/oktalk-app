@@ -1,14 +1,14 @@
 import 'dart:async';
-import 'dart:ui';
-import 'dart:math' as math;
 import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart'; // 新增引入
-import 'package:http/http.dart' as http;
-import 'package:record/record.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'dart:math' as math;
+
+import 'package:audioplayers/audioplayers.dart'; // 新增引入
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
 
 import 'guided_chat_summary_page.dart';
 
@@ -367,7 +367,6 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
 
       // 4. 如果 sceneCompleted 为 true，记录状态并停止播放器
       if (sceneCompleted) {
-        debugPrint("查看sceneComplete:$sceneCompleted");
         await _audioPlayer.stop();
         isCompleted = true;
       }
@@ -386,8 +385,6 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
 
     // 5. 在弹窗关闭后，执行页面跳转
     if (isCompleted && mounted) {
-      debugPrint("页面跳转到GuidedChatSummaryPage,传递的参数为$_sessionId");
-      debugPrint(widget.title);
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) =>

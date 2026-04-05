@@ -27,6 +27,8 @@ class _GuidedChatSummaryPageState extends State<GuidedChatSummaryPage> {
     'OKTALK_API_BASE_URL',
     defaultValue: 'http://8.155.145.36:8080',
   );
+  static const String _aiAvatarUrl =
+      'https://oktalk.oss-cn-heyuan.aliyuncs.com/assets/images/3Ddragon.png';
 
   bool _loading = true;
   String? _error;
@@ -290,11 +292,17 @@ class _GuidedChatSummaryPageState extends State<GuidedChatSummaryPage> {
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white.withOpacity(0.2), width: 3),
             color: const Color(0xFFFDC003),
-            image: const DecorationImage(
-              image: NetworkImage(
-                'https://lh3.googleusercontent.com/aida-public/AB6AXuAbRoKc-EwqPKyz9qdlTVbwvzrLMjPqTYDvh_t3xrRni3N86NLvN7cZfZ4he8inIeiU7RqAxsrvpSb0TOOQbLwR12LjlgrHQnZXDn-qYeqH59f0qEUM0FbBapnxbZlU_Hy2iaVc78l4iy0MY26kyDKqroYio82-8AlnChhIXyjbsYmrJthcOo3MW6qMX9YNjZyDIYD4367lbjMD-HDDerH5POnxgSNDQmQPlmOJBHYvIeWoqyfahmDHBr_yeImFE_ZJFED5BOlOFZ9T',
-              ),
+          ),
+          child: ClipOval(
+            child: Image.network(
+              _aiAvatarUrl,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Image.asset(
+                  'assets/images/ai_avatar.png', // 本地默认头像
+                  fit: BoxFit.cover,
+                );
+              },
             ),
           ),
         ),
@@ -344,7 +352,7 @@ class _GuidedChatSummaryPageState extends State<GuidedChatSummaryPage> {
                     borderRadius: BorderRadius.circular(100),
                   ),
                   child: Text(
-                    'AI 小助手',
+                    'OK AI',
                     style: GoogleFonts.plusJakartaSans(
                       color: Colors.white,
                       fontSize: 10,
