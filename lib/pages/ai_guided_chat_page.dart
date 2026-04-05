@@ -153,8 +153,8 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
       if (!mounted) return;
       setState(() {
         _messages.addAll(built);
-        // 如果历史为空，先展示当前问题
-        if (_messages.isEmpty && _question.isNotEmpty) {
+        // 总是添加 startData 中的当前问题（无论历史是否为空）
+        if (_question.isNotEmpty) {
           _messages.add(
             ChatMessage(
               isUser: false,
@@ -315,6 +315,7 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
         }
         _currentStep = currentStep;
       });
+      await _playAudio(aiAudioUrl);
       _scrollToBottom();
 
       if (stepAdvanced &&
