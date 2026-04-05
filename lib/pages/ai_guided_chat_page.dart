@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'dart:math' as math;
 import 'dart:convert';
@@ -191,8 +192,21 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
     try {
       // 每次播放前先停止上一条可能还在播放的语音，防止声音重叠
       await _audioPlayer.stop();
+      // 创建一个 Completer 来等待播放完成
+      final completer = Completer<void>();
+
+      // 设置完成监听器
+      late StreamSubscription<void> subscription;
+      subscription = _audioPlayer.onPlayerComplete.listen((_) {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+        subscription.cancel();
+      });
       // 直接播放网络 URL
       await _audioPlayer.play(UrlSource(url));
+      // 等待播放完成
+      await completer.future;
     } catch (e) {
       debugPrint("播放音频失败: $e");
     }
@@ -290,6 +304,7 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
           (data['next_question_audio_url'] ?? '').toString();
 
       if (!mounted) return;
+      // 1. 先添加用户消息和 AI 回复消息到界面
       setState(() {
         if (userText.isNotEmpty) {
           _messages.add(
@@ -315,9 +330,15 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
         }
         _currentStep = currentStep;
       });
-      await _playAudio(aiAudioUrl);
       _scrollToBottom();
 
+      // 2. 播放 AI 回复的音频，并等待播放完成
+      if (aiAudioUrl.isNotEmpty) {
+        await _playAudio(aiAudioUrl);
+      }
+
+
+      // 3. 等 AI 回复音频播放完成后，如果 stepAdvanced 为 true，再添加并播放下一个问题
       if (stepAdvanced &&
           nextQuestion.isNotEmpty &&
           nextQuestionAudioUrl.isNotEmpty) {
@@ -336,9 +357,11 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
           );
         });
         _scrollToBottom();
+        // 播放下一个问题的音频，并等待完成
         await _playAudio(nextQuestionAudioUrl);
       }
 
+      // 4. 等所有音频播放完成后，如果 sceneCompleted 为 true，跳转到总结页面
       if (sceneCompleted) {
         await _audioPlayer.stop();
         if (!mounted) return;
