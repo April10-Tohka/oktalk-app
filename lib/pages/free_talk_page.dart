@@ -3,13 +3,14 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
-import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:record/record.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'ai_home_page.dart';
 
@@ -43,6 +44,7 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
 
   // 3. 音频与录音
   final AudioPlayer _audioPlayer = AudioPlayer();
+  _PcmStreamSource? _pcmSource; // PCM 流式数据源
   final AudioRecorder _recorder = AudioRecorder();
   StreamSubscription<Uint8List>? _recordSubscription;
   List<int> _audioBuffer = [];
@@ -58,6 +60,7 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
   @override
   void initState() {
     super.initState();
+    _initAudioPlayer(); // ← 新增初始化播放器
     _initSession();
   }
 
@@ -68,9 +71,16 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     _subtitleFadeTimer?.cancel();
     _recordSubscription?.cancel();
     _channel?.sink.close();
+    _pcmSource?.close();
     _audioPlayer.dispose();
     _recorder.dispose();
     super.dispose();
+  }
+
+  // 初始化播放器
+  Future<void> _initAudioPlayer() async {
+    _pcmSource = _PcmStreamSource(sampleRate: 16000, channels: 1);
+    await _audioPlayer.setAudioSource(_pcmSource!);
   }
 
   // 初始化会话
@@ -78,13 +88,13 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     try {
       final uri = Uri.parse('$_apiBaseUrl/api/v1/chat/session/start');
       final response = await http.post(uri);
-      
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         // 假设返回结构为 {"code": 200, "data": {"session_id": "..."}} 或 {"session_id": "..."}
         // 根据 ai_guided_chat_page.dart 的模式，通常有 code: 200
         final sessionId = data['data']?['session_id'] ?? data['session_id'];
-        
+
         if (sessionId != null) {
           setState(() {
             _sessionId = sessionId.toString();
@@ -126,8 +136,9 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
   // 1. 建立 WebSocket 连接
   void _connectWebSocket() {
     if (_sessionId == null) return;
-    
-    final wsUrl = 'ws://${_apiBaseUrl.replaceFirst('http://', '')}/api/v1/chat/freetalk?session_id=$_sessionId';
+
+    final wsUrl =
+        'ws://${_apiBaseUrl.replaceFirst('http://', '')}/api/v1/chat/freetalk?session_id=$_sessionId';
     _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
     _channel!.stream.listen(
@@ -152,7 +163,7 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     setState(() {
       _isLoading = false;
     });
-    
+
     _startCallTimer();
     // 默认开启麦克风录音
     _startRecording();
@@ -160,46 +171,61 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
 
   // 2. 处理文字字幕 (流式拼接)
   void _handleTextData(String text) {
-    setState(() {
-      _subtitles.write(text);
-      _subtitleOpacity = 1.0;
-    });
+    try {
+      final json = jsonDecode(text) as Map<String, dynamic>;
+      final type = json['type'] as String?;
 
-    // 5秒后淡出
-    _subtitleFadeTimer?.cancel();
-    _subtitleFadeTimer = Timer(const Duration(seconds: 5), () {
-      if (mounted) {
-        setState(() {
-          _subtitleOpacity = 0.0;
-        });
+      switch (type) {
+        case 'llm_token':
+          setState(() {
+            _subtitles.write(json['text'] ?? '');
+            _subtitleOpacity = 1.0;
+          });
+          _subtitleFadeTimer?.cancel();
+          _subtitleFadeTimer = Timer(const Duration(seconds: 5), () {
+            if (mounted) setState(() => _subtitleOpacity = 0.0);
+          });
+
+        case 'turn_end':
+          // TTS 全部帧发完，等播放器自然停止后更新 UI
+          _pcmSource?.done();
+          _audioPlayer.playerStateStream
+              .firstWhere((s) => s.processingState == ProcessingState.completed)
+              .then((_) {
+                if (mounted) setState(() => _isAiSpeaking = false);
+              });
+
+        case 'listening':
+          // VAD 检测到用户开始说话，可选：清空上一轮字幕
+          setState(() {
+            _subtitles.clear();
+            _subtitleOpacity = 1.0;
+          });
+
+        case 'asr_text':
+          // 可选：展示用户说的话
+          break;
+
+        default:
+          debugPrint('Unknown message type: $type');
       }
-    });
+    } catch (e) {
+      debugPrint('Failed to parse text frame: $e — raw: $text');
+    }
   }
 
   // 3. 处理二进制音频 (WAV 格式)
   Future<void> _handleBinaryData(List<int> bytes) async {
-    setState(() {
-      _isAiSpeaking = true;
-    });
-    
-    try {
-      // 播放 WAV 音频
-      await _audioPlayer.play(BytesSource(Uint8List.fromList(bytes)));
-      
-      // 监听播放完成
-      _audioPlayer.onPlayerComplete.first.then((_) {
-        if (mounted) {
-          setState(() {
-            _isAiSpeaking = false;
-          });
-        }
-      });
-    } catch (e) {
-      debugPrint('Error playing audio: $e');
-      setState(() {
-        _isAiSpeaking = false;
-      });
+    if (!_isAiSpeaking) {
+      // 新一轮音频开始：重置流并启动播放
+      _pcmSource?.reset();
+      setState(() => _isAiSpeaking = true);
+      if (_audioPlayer.playerState.playing == false) {
+        await _audioPlayer.play();
+      }
     }
+    // 把这一帧 PCM 数据推入流
+    _pcmSource?.addChunk(Uint8List.fromList(bytes));
   }
 
   // 4. 麦克风录音与 PCM 推流
@@ -237,7 +263,9 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
       });
 
       // 每 500ms 发送一次 Buffer
-      _sendBufferTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      _sendBufferTimer = Timer.periodic(const Duration(milliseconds: 500), (
+        timer,
+      ) {
         _sendAudioBuffer();
       });
     }
@@ -296,7 +324,11 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+                const Icon(
+                  Icons.error_outline,
+                  color: Colors.redAccent,
+                  size: 48,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   '连接失败: $_errorMessage',
@@ -525,13 +557,19 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
                   width: 60,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _isMicOn ? Colors.white.withOpacity(0.15) : Colors.red.withOpacity(0.2),
-                    border: Border.all(color: _isMicOn ? Colors.white.withOpacity(0.25) : Colors.red.withOpacity(0.5)),
+                    color: _isMicOn
+                        ? Colors.white.withOpacity(0.15)
+                        : Colors.red.withOpacity(0.2),
+                    border: Border.all(
+                      color: _isMicOn
+                          ? Colors.white.withOpacity(0.25)
+                          : Colors.red.withOpacity(0.5),
+                    ),
                   ),
                   child: Icon(
-                    _isMicOn ? Icons.mic : Icons.mic_off, 
-                    color: _isMicOn ? Colors.white : Colors.redAccent, 
-                    size: 24
+                    _isMicOn ? Icons.mic : Icons.mic_off,
+                    color: _isMicOn ? Colors.white : Colors.redAccent,
+                    size: 24,
                   ),
                 ),
               ),
@@ -649,6 +687,98 @@ class SpeakingIndicator extends StatelessWidget {
         color: Colors.white.withOpacity(0.55),
         borderRadius: BorderRadius.circular(2),
       ),
+    );
+  }
+}
+
+/// 自定义 PCM 流式数据源，供 just_audio 消费
+/// 适用于 16-bit signed PCM，小端字节序，单声道
+class _PcmStreamSource extends StreamAudioSource {
+  final int sampleRate;
+  final int channels;
+
+  // WAV header 固定为 4GB 占位，just_audio 通过 header 获取格式信息
+  static const int _maxSize = 0x7FFFFFFF;
+
+  final StreamController<List<int>> _controller = StreamController<List<int>>();
+
+  bool _started = false;
+  final List<int> _wavHeader = [];
+
+  _PcmStreamSource({required this.sampleRate, required this.channels}) {
+    _wavHeader.addAll(_buildWavHeader());
+  }
+
+  /// 生成一个"无限长"WAV header，让播放器知道格式
+  List<int> _buildWavHeader() {
+    final byteData = ByteData(44);
+    // RIFF header
+    _writeString(byteData, 0, 'RIFF');
+    byteData.setUint32(4, _maxSize, Endian.little);
+    _writeString(byteData, 8, 'WAVE');
+    // fmt chunk
+    _writeString(byteData, 12, 'fmt ');
+    byteData.setUint32(16, 16, Endian.little); // chunk size
+    byteData.setUint16(20, 1, Endian.little); // PCM format
+    byteData.setUint16(22, channels, Endian.little);
+    byteData.setUint32(24, sampleRate, Endian.little);
+    byteData.setUint32(
+      28,
+      sampleRate * channels * 2,
+      Endian.little,
+    ); // byte rate
+    byteData.setUint16(32, channels * 2, Endian.little); // block align
+    byteData.setUint16(34, 16, Endian.little); // bits per sample
+    // data chunk
+    _writeString(byteData, 36, 'data');
+    byteData.setUint32(40, _maxSize - 36, Endian.little);
+    return byteData.buffer.asUint8List();
+  }
+
+  void _writeString(ByteData data, int offset, String str) {
+    for (int i = 0; i < str.length; i++) {
+      data.setUint8(offset + i, str.codeUnitAt(i));
+    }
+  }
+
+  /// 推入一帧 PCM 数据
+  void addChunk(Uint8List chunk) {
+    if (!_controller.isClosed) {
+      _controller.add(chunk);
+    }
+  }
+
+  /// 本轮音频结束
+  void done() {
+    // 不关闭 controller，等下一轮 reset 复用
+  }
+
+  /// 新一轮音频开始前重置
+  void reset() {
+    _started = false;
+  }
+
+  void close() {
+    _controller.close();
+  }
+
+  @override
+  Future<StreamAudioResponse> request([int? start, int? end]) async {
+    // 把 WAV header + PCM 数据流拼接后返回给 just_audio
+    final headerStream = Stream.value(_wavHeader);
+    final combinedStream = StreamGroup.merge([
+      headerStream,
+      _controller.stream,
+    ]);
+
+    return StreamAudioResponse(
+      sourceLength: null, // 未知总长度，流式
+      contentLength: null,
+      offset: 0,
+      stream: combinedStream.map(
+        (chunk) => chunk is List<int> ? chunk : chunk as List<int>,
+      ),
+      contentType: 'audio/wav',
     );
   }
 }
