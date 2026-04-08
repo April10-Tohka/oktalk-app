@@ -301,11 +301,26 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     _recordSubscription = null;
     await _recorder.stop();
     _sendBufferTimer?.cancel();
-    _sendAudioBuffer();
+    // AI说话期间即使关闭麦克风也不发送
+    // 只在 AI 没有说话时，才发送最后一段
+    if (!_isAiSpeaking) {
+      _sendAudioBuffer();
+    } else {
+      _audioBuffer.clear(); // AI在说话时，直接丢弃最后这段
+    }
   }
 
   void _sendAudioBuffer() {
-    if (_audioBuffer.isNotEmpty && _channel != null) {
+    // 如果 AI 正在说话，我们不仅不发，还要清空缓冲区，防止累积噪音
+    if (_isAiSpeaking) {
+      debugPrint("AI 正在说话，我们不仅不发，还要清空缓冲区");
+      _audioBuffer.clear();
+      return;
+    }
+
+    // 只有 AI 没在说话，且麦克风开启、缓冲区有数据时才发送
+    if (_audioBuffer.isNotEmpty && _channel != null && _isMicOn) {
+      debugPrint("只有 AI 没在说话，且麦克风开启、缓冲区有数据时才发送");
       _channel!.sink.add(Uint8List.fromList(_audioBuffer));
       _audioBuffer.clear();
     }
