@@ -28,8 +28,7 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
 
   static const String _aiAvatarUrl =
       'https://oktalk.oss-cn-heyuan.aliyuncs.com/assets/images/3Ddragon.png';
-  static const String _default_ai_avatar =
-      'assets/images/default_ai_avatar.png';
+  static const String _defaultAiAvatar = 'assets/images/default_ai_avatar.png';
 
   // 1. 会话与连接状态
   String? _sessionId;
@@ -49,10 +48,10 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
   Timer? _sendBufferTimer;
 
   // 4. UI 状态
-  bool _isMicOn = true; // 页面初始是开启状态
+  bool _isMicOn = true;
   bool _isAiSpeaking = false;
   String _statusText = '准备就绪...';
-  StringBuffer _subtitles = StringBuffer();
+  final StringBuffer _subtitles = StringBuffer();
   double _subtitleOpacity = 1.0;
   Timer? _subtitleFadeTimer;
 
@@ -61,7 +60,7 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
   @override
   void initState() {
     super.initState();
-    _initAudioPlayer(); // ← 新增初始化播放器
+    _initAudioPlayer();
     _initSession();
   }
 
@@ -77,12 +76,10 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     super.dispose();
   }
 
-  // 初始化播放器
   Future<void> _initAudioPlayer() async {
     _playlist = ConcatenatingAudioSource(children: []);
     await _audioPlayer.setAudioSource(_playlist);
 
-    // 监听播放状�?
     _audioPlayer.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         if (mounted && _isAiSpeaking) {
@@ -95,7 +92,6 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     });
   }
 
-  // 初始化会�?
   Future<void> _initSession() async {
     try {
       final uri = Uri.parse('$_apiBaseUrl/api/v1/chat/session/start');
@@ -103,8 +99,6 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // 假设返回结构�?{"code": 200, "data": {"session_id": "..."}} �?{"session_id": "..."}
-        // 根据 ai_guided_chat_page.dart 的模式，通常�?code: 200
         final sessionId = data['data']?['session_id'] ?? data['session_id'];
 
         if (sessionId != null) {
@@ -145,7 +139,6 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     return '$m:$s';
   }
 
-  // 1. 建立 WebSocket 连接
   void _connectWebSocket() {
     if (_sessionId == null) return;
 
@@ -162,26 +155,18 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
         }
       },
       onDone: () {
-        debugPrint('WebSocket closed');
-        if (mounted) {
-          _callTimer?.cancel();
-        }
+        if (mounted) _callTimer?.cancel();
       },
       onError: (err) {
         debugPrint('WebSocket error: $err');
       },
     );
 
-    setState(() {
-      _isLoading = false;
-    });
-
+    setState(() => _isLoading = false);
     _startCallTimer();
-    // 默认开启麦克风录音
     _startRecording();
   }
 
-  // 2. 处理文字字幕 (流式拼接)
   void _handleTextData(String text) {
     try {
       final json = jsonDecode(text) as Map<String, dynamic>;
@@ -189,13 +174,11 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
 
       switch (type) {
         case 'listening':
-          // VAD 监听到用户说�?
           setState(() {
             _statusText = '正在听取您的声音...';
-            _subtitles.clear(); // 新的一轮，清空字幕
+            _subtitles.clear();
             _isAiSpeaking = false;
           });
-          // 停止当前播放并清空播放列表，以便下次 AI 说话
           _audioPlayer.stop();
           _playlist.clear();
           break;
@@ -205,7 +188,6 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
             _subtitles.write(json['text'] ?? '');
             _subtitleOpacity = 1.0;
           });
-          // 5秒后淡出
           _subtitleFadeTimer?.cancel();
           _subtitleFadeTimer = Timer(const Duration(seconds: 5), () {
             if (mounted) setState(() => _subtitleOpacity = 0.0);
@@ -213,23 +195,18 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
           break;
 
         case 'turn_end':
-          debugPrint('Turn end received');
           break;
 
         case 'error':
-          final msg = json['message'] ?? 'Unknown error';
-          debugPrint('Backend error: $msg');
           break;
 
         default:
-          debugPrint('Unknown message type: $type');
       }
     } catch (e) {
-      debugPrint('Failed to parse text frame: $e �?raw: $text');
+      debugPrint('Failed to parse text frame: $e');
     }
   }
 
-  // 3. 处理二进制音�?(PCM 16kHz Mono)
   Future<void> _handleBinaryData(List<int> bytes) async {
     if (!_isAiSpeaking) {
       setState(() {
@@ -242,7 +219,6 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
       }
     }
 
-    // 构造带�?WAV 头的分片，just_audio 播放
     final wavBytes = _createWavHeader(bytes.length, 16000, 1);
     final fullAudio = Uint8List.fromList([...wavBytes, ...bytes]);
 
@@ -251,23 +227,19 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     );
   }
 
-  // 工具：生成简单的 WAV 文件�?
   Uint8List _createWavHeader(int dataLength, int sampleRate, int channels) {
     final byteData = ByteData(44);
-    // RIFF header
     _writeString(byteData, 0, 'RIFF');
     byteData.setUint32(4, 36 + dataLength, Endian.little);
     _writeString(byteData, 8, 'WAVE');
-    // fmt chunk
     _writeString(byteData, 12, 'fmt ');
     byteData.setUint32(16, 16, Endian.little);
-    byteData.setUint16(20, 1, Endian.little); // PCM
+    byteData.setUint16(20, 1, Endian.little);
     byteData.setUint16(22, channels, Endian.little);
     byteData.setUint32(24, sampleRate, Endian.little);
     byteData.setUint32(28, sampleRate * channels * 2, Endian.little);
     byteData.setUint16(32, channels * 2, Endian.little);
     byteData.setUint16(34, 16, Endian.little);
-    // data chunk
     _writeString(byteData, 36, 'data');
     byteData.setUint32(40, dataLength, Endian.little);
     return byteData.buffer.asUint8List();
@@ -279,20 +251,16 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     }
   }
 
-  // 4. 麦克风录音与 PCM 推流
   Future<void> _toggleMic() async {
     if (_isMicOn) {
       await _stopRecording();
     } else {
       await _startRecording();
     }
-    setState(() {
-      _isMicOn = !_isMicOn;
-    });
+    setState(() => _isMicOn = !_isMicOn);
   }
 
   Future<void> _startRecording() async {
-    // 权限检�?
     var status = await Permission.microphone.status;
     if (!status.isGranted) {
       status = await Permission.microphone.request();
@@ -300,7 +268,6 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     }
 
     if (await _recorder.hasPermission()) {
-      // 原始 PCM, 16000Hz, 单声�?
       final stream = await _recorder.startStream(
         const RecordConfig(
           encoder: AudioEncoder.pcm16bits,
@@ -313,7 +280,6 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
         _audioBuffer.addAll(data);
       });
 
-      // �?500ms 发送一�?Buffer
       _sendBufferTimer = Timer.periodic(const Duration(milliseconds: 500), (
         timer,
       ) {
@@ -327,7 +293,7 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     _recordSubscription = null;
     await _recorder.stop();
     _sendBufferTimer?.cancel();
-    _sendAudioBuffer(); // 发送剩余数�?
+    _sendAudioBuffer();
   }
 
   void _sendAudioBuffer() {
@@ -401,7 +367,7 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. 沉浸式径向渐变背�?
+          // 1. 背景层
           Container(
             decoration: const BoxDecoration(
               gradient: RadialGradient(
@@ -412,7 +378,7 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
             ),
           ),
 
-          // 2. 地形纹理叠加�?
+          // 2. 地形纹理
           Positioned.fill(
             child: Opacity(
               opacity: 0.15,
@@ -420,35 +386,40 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
             ),
           ),
 
-          // 3. 主要内容区域
+          // 3. 响应式内容布局
           SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(context),
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const NeverScrollableScrollPhysics(),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 80),
-                        _buildAICharacter(),
-                        const SizedBox(height: 40),
-                        _buildSubtitleCard(),
-                        const SizedBox(height: 100),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // 计算响应式尺寸
+                double screenHeight = constraints.maxHeight;
+                double avatarSize = (screenHeight * 0.3).clamp(180.0, 280.0);
 
-          // 4. 底部操作区域
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: _buildBottomActions(),
+                return Column(
+                  children: [
+                    _buildHeader(context),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildAICharacter(avatarSize),
+                          Flexible(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              child: SingleChildScrollView(
+                                child: _buildSubtitleCard(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _buildBottomActions(),
+                  ],
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -457,33 +428,24 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       child: Stack(
         alignment: Alignment.center,
         children: [
           Align(
             alignment: Alignment.centerLeft,
-            child: GestureDetector(
-              onTap: _hangUp,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(shape: BoxShape.circle),
-                child: const Icon(
-                  Icons.arrow_back,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: _hangUp,
             ),
           ),
-
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 _formatDuration(_elapsedSeconds),
                 style: const TextStyle(
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
@@ -504,48 +466,51 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     );
   }
 
-  Widget _buildAICharacter() {
+  Widget _buildAICharacter(double size) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Stack(
           alignment: Alignment.center,
           children: [
             Container(
-              width: 280,
-              height: 280,
+              width: size,
+              height: size,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFF71A66E).withOpacity(0.2),
-                    blurRadius: 60,
-                    spreadRadius: 20,
+                    blurRadius: 40,
+                    spreadRadius: 10,
                   ),
                 ],
               ),
             ),
-            Image.network(
-              _aiAvatarUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  Image.asset(_default_ai_avatar, fit: BoxFit.cover),
+            SizedBox(
+              width: size * 0.85,
+              height: size * 0.85,
+              child: Image.network(
+                _aiAvatarUrl,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) =>
+                    Image.asset(_defaultAiAvatar, fit: BoxFit.cover),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 32),
-        // 仅在 AI 说话时显示指示器
+        const SizedBox(height: 16),
         Opacity(
           opacity: _isAiSpeaking ? 1.0 : 0.0,
           child: const SpeakingIndicator(),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
         Text(
           _statusText,
           style: GoogleFonts.plusJakartaSans(
             fontSize: 12,
             color: Colors.white.withOpacity(0.5),
             fontWeight: FontWeight.w500,
-            letterSpacing: 0.5,
           ),
         ),
       ],
@@ -553,134 +518,118 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
   }
 
   Widget _buildSubtitleCard() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        children: [
-          AnimatedOpacity(
-            opacity: _subtitleOpacity,
-            duration: const Duration(milliseconds: 500),
-            child: ClipRRect(
+    return AnimatedOpacity(
+      opacity: _subtitleOpacity,
+      duration: const Duration(milliseconds: 500),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
               borderRadius: BorderRadius.circular(24),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white.withOpacity(0.18)),
-                  ),
-                  child: Text(
-                    _subtitles.isEmpty ? '等待 AI 回复...' : _subtitles.toString(),
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
+              border: Border.all(color: Colors.white.withOpacity(0.18)),
+            ),
+            child: Text(
+              _subtitles.isEmpty ? '等待 AI 回复...' : _subtitles.toString(),
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                height: 1.4,
               ),
             ),
           ),
-          const SizedBox(height: 12),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildBottomActions() {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 48, top: 32),
+      padding: const EdgeInsets.only(bottom: 32, top: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              GestureDetector(
-                onTap: _toggleMic,
-                child: Container(
-                  height: 60,
-                  width: 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _isMicOn
-                        ? Colors.white.withOpacity(0.15)
-                        : Colors.red.withOpacity(0.2),
-                    border: Border.all(
-                      color: _isMicOn
-                          ? Colors.white.withOpacity(0.25)
-                          : Colors.red.withOpacity(0.5),
-                    ),
-                  ),
-                  child: Icon(
-                    _isMicOn ? Icons.mic : Icons.mic_off,
-                    color: _isMicOn ? Colors.white : Colors.redAccent,
-                    size: 24,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '麦克�?',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  color: Colors.white.withOpacity(0.65),
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
+          _buildActionButton(
+            onTap: _toggleMic,
+            icon: _isMicOn ? Icons.mic : Icons.mic_off,
+            label: '麦克风',
+            color: _isMicOn
+                ? Colors.white.withOpacity(0.15)
+                : Colors.red.withOpacity(0.2),
+            iconColor: _isMicOn ? Colors.white : Colors.redAccent,
           ),
           const SizedBox(width: 48),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              GestureDetector(
-                onTap: _hangUp,
-                child: Container(
-                  height: 72,
-                  width: 72,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0xFFE53935), Color(0xFFC62828)],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x8C000000),
-                        blurRadius: 24,
-                        offset: Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.call_end,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '挂断',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
+          _buildActionButton(
+            onTap: _hangUp,
+            icon: Icons.call_end,
+            label: '挂断',
+            size: 72,
+            isGradient: true,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required VoidCallback onTap,
+    required IconData icon,
+    required String label,
+    double size = 60,
+    Color? color,
+    Color iconColor = Colors.white,
+    bool isGradient = false,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            height: size,
+            width: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isGradient ? null : color,
+              gradient: isGradient
+                  ? const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xFFE53935), Color(0xFFC62828)],
+                    )
+                  : null,
+              border: isGradient
+                  ? null
+                  : Border.all(color: Colors.white.withOpacity(0.1)),
+              boxShadow: isGradient
+                  ? [
+                      const BoxShadow(
+                        color: Colors.black45,
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Icon(icon, color: iconColor, size: size * 0.4),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            color: Colors.white.withOpacity(0.65),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -694,7 +643,6 @@ class TopographicPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final path = Path();
-    // 绘制一些波浪线模拟地形纹理
     for (var i = 1; i <= 3; i++) {
       double y = size.height * (i / 4);
       path.moveTo(0, y);
@@ -716,30 +664,18 @@ class SpeakingIndicator extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        _buildBar(10),
-        const SizedBox(width: 5),
-        _buildBar(20),
-        const SizedBox(width: 5),
-        _buildBar(30),
-        const SizedBox(width: 5),
-        _buildBar(18),
-        const SizedBox(width: 5),
-        _buildBar(12),
-      ],
-    );
-  }
-
-  Widget _buildBar(double height) {
-    return Container(
-      width: 4,
-      height: height,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.55),
-        borderRadius: BorderRadius.circular(2),
-      ),
+      children: List.generate(5, (index) {
+        double h = [10.0, 20.0, 30.0, 18.0, 12.0][index];
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 2.5),
+          width: 4,
+          height: h,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.55),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        );
+      }),
     );
   }
 }
-
-/// 自定�?PCM 流式数据源，�?just_audio 消费
