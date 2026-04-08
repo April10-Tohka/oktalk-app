@@ -13,6 +13,13 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'ai_home_page.dart';
 
+enum VoiceSessionState {
+  idle, // 刚连上，等待开口
+  listening, // 收到 type: listening
+  thinking, // 收到 type: thinking
+  speaking, // 收到音频流数据
+}
+
 class FreeTalkPage extends StatefulWidget {
   const FreeTalkPage({super.key});
 
@@ -50,7 +57,9 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
   // 4. UI 状态
   bool _isMicOn = true;
   bool _isAiSpeaking = false;
-  String _statusText = '准备就绪...';
+  bool _isTurnEnded = false; // 用于 Bug 3：标记本轮 TTS 是否推送完毕
+  VoiceSessionState _sessionState = VoiceSessionState.idle;
+  String _statusText = '有什么可以帮您的？';
   final StringBuffer _subtitles = StringBuffer();
   double _subtitleOpacity = 1.0;
   Timer? _subtitleFadeTimer;
@@ -82,14 +91,10 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
 
     _audioPlayer.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
-        if (mounted && _isAiSpeaking) {
-          setState(() {
-            _isAiSpeaking = false;
-            _statusText = '正在听取您的声音...';
-          });
-
+        if (mounted) {
+          debugPrint("音频播放完毕, 状态: ${state.processingState}, _isTurnEnded: $_isTurnEnded");
           // --- 新增：音频播放完毕后，开启 5 秒倒计时淡出字幕 ---
-          _subtitleFadeTimer?.cancel(); // 取消之前的计时器
+          _subtitleFadeTimer?.cancel();
           _subtitleFadeTimer = Timer(const Duration(seconds: 5), () {
             if (mounted) {
               setState(() {
@@ -97,9 +102,31 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
               });
             }
           });
+
+          // Bug 3：播放完之后，且收到了 turn_end 事件才能转变状态为 idle
+          if (_isTurnEnded) {
+            _transitionToIdle();
+          }
         }
       }
     });
+  }
+
+  void _transitionToIdle() {
+    debugPrint("状态转换: 从 $_sessionState 转换为 idle");
+    setState(() {
+      _sessionState = VoiceSessionState.idle;
+      _statusText = '有什么可以帮您的？';
+      _isAiSpeaking = false;
+      _isTurnEnded = false; // 重置
+    });
+
+    // P0 Fix: 在回归 idle 时，确保录音引擎是开启且活跃的。
+    // 如果之前因为 focus loss 导致录音停止，强制重新启动它。
+    if (_isMicOn) {
+      debugPrint("正在回归 idle，强制重新启动录音以确保活跃状态...");
+      _restartRecording();
+    }
   }
 
   Future<void> _initSession() async {
@@ -185,14 +212,24 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
       switch (type) {
         case 'listening':
           setState(() {
-            _statusText = '正在听取您的声音...';
+            _sessionState = VoiceSessionState.listening;
+            _statusText = '正在听您的声音。。。';
             _subtitles.clear();
             _isAiSpeaking = false;
+            _isTurnEnded = false; // 用户开始说话了，重置 turn_end 状态
             _subtitleOpacity = 1.0; // 重置透明度供下一轮使用
           });
           _subtitleFadeTimer?.cancel(); // 用户说话了，停止之前的淡出计时
           _audioPlayer.stop();
           _playlist.clear();
+          break;
+
+        case 'thinking':
+          setState(() {
+            _sessionState = VoiceSessionState.thinking;
+            _statusText = '正在听您的声音。。。';
+            _isAiSpeaking = false;
+          });
           break;
 
         case 'llm_token':
@@ -203,6 +240,13 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
           break;
 
         case 'turn_end':
+          setState(() {
+            _isTurnEnded = true;
+          });
+          // 如果当前没有在播放音频，或者播放器已经完成了，直接转换回 idle
+          if (!_audioPlayer.playing || _audioPlayer.processingState == ProcessingState.completed) {
+            _transitionToIdle();
+          }
           break;
 
         case 'error':
@@ -216,10 +260,11 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
   }
 
   Future<void> _handleBinaryData(List<int> bytes) async {
-    if (!_isAiSpeaking) {
+    if (_sessionState != VoiceSessionState.speaking) {
       setState(() {
+        _sessionState = VoiceSessionState.speaking;
         _isAiSpeaking = true;
-        _statusText = 'AI 正在说话...';
+        _statusText = 'AI正在说话。。。';
       });
 
       if (!_audioPlayer.playing) {
@@ -260,15 +305,41 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
   }
 
   Future<void> _toggleMic() async {
-    if (_isMicOn) {
-      await _stopRecording();
-    } else {
-      await _startRecording();
-    }
     setState(() => _isMicOn = !_isMicOn);
+    debugPrint("麦克风状态切换: $_isMicOn, 当前状态: $_sessionState");
+
+    // Bug 2 修复 (P1)：只有在 AI 不说话/不思考时，才真正操作录音引擎
+    // 如果 AI 正在说话，切换麦克风只改标志位，由 _sendAudioBuffer 负责丢弃数据，
+    // 这样就不会因为重新启动录音而抢夺音频播放器的焦点，从而避免打断播放。
+    if (_sessionState == VoiceSessionState.idle ||
+        _sessionState == VoiceSessionState.listening) {
+      if (_isMicOn) {
+        // 强制重启录音引擎，确保从 speaking 切换回来的录音状态是干净的，且拥有音频焦点
+        _restartRecording();
+      } else {
+        _stopRecording();
+      }
+    }
+  }
+
+  Future<void> _restartRecording() async {
+    debugPrint("强制重启录音引擎...");
+    await _stopRecording();
+    await _startRecording();
   }
 
   Future<void> _startRecording() async {
+    // 检查录音引擎是否已经在工作
+    bool isActuallyRecording = await _recorder.isRecording();
+
+    if (isActuallyRecording &&
+        _recordSubscription != null &&
+        _sendBufferTimer != null &&
+        _sendBufferTimer!.isActive) {
+      debugPrint("录音已在进行中且 Subscription/Timer 活跃，跳过启动");
+      return;
+    }
+
     var status = await Permission.microphone.status;
     if (!status.isGranted) {
       status = await Permission.microphone.request();
@@ -276,6 +347,7 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     }
 
     if (await _recorder.hasPermission()) {
+      debugPrint("启动录音引擎...");
       final stream = await _recorder.startStream(
         const RecordConfig(
           encoder: AudioEncoder.pcm16bits,
@@ -284,10 +356,18 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
         ),
       );
 
+      _recordSubscription?.cancel();
       _recordSubscription = stream.listen((data) {
-        _audioBuffer.addAll(data);
+        if (data.isNotEmpty) {
+          _audioBuffer.addAll(data);
+        }
+      }, onError: (err) {
+        debugPrint("录音流发生错误: $err");
+      }, onDone: () {
+        debugPrint("录音流意外结束");
       });
 
+      _sendBufferTimer?.cancel();
       _sendBufferTimer = Timer.periodic(const Duration(milliseconds: 500), (
         timer,
       ) {
@@ -301,32 +381,45 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     _recordSubscription = null;
     await _recorder.stop();
     _sendBufferTimer?.cancel();
-    // AI说话期间即使关闭麦克风也不发送
-    // 只在 AI 没有说话时，才发送最后一段
-    if (!_isAiSpeaking) {
+    // 只有在 idle 和 listening 状态下才发送最后一段音频
+    if (_sessionState == VoiceSessionState.idle ||
+        _sessionState == VoiceSessionState.listening) {
       _sendAudioBuffer();
     } else {
-      _audioBuffer.clear(); // AI在说话时，直接丢弃最后这段
+      _audioBuffer.clear(); // 其他状态下采集到用户音频不发送给后端，直接丢弃
     }
   }
 
   void _sendAudioBuffer() {
-    // 如果 AI 正在说话，我们不仅不发，还要清空缓冲区，防止累积噪音
-    if (_isAiSpeaking) {
-      debugPrint("AI 正在说话，我们不仅不发，还要清空缓冲区");
-      _audioBuffer.clear();
-      return;
-    }
+    if (_channel == null) return;
 
-    // 只有 AI 没在说话，且麦克风开启、缓冲区有数据时才发送
-    if (_audioBuffer.isNotEmpty && _channel != null && _isMicOn) {
-      debugPrint("只有 AI 没在说话，且麦克风开启、缓冲区有数据时才发送");
-      _channel!.sink.add(Uint8List.fromList(_audioBuffer));
-      _audioBuffer.clear();
+    // 只有在 idle 和 listening 状态下才发送音频给后端
+    if (_sessionState == VoiceSessionState.idle ||
+        _sessionState == VoiceSessionState.listening) {
+      if (_isMicOn) {
+        if (_audioBuffer.isNotEmpty) {
+          debugPrint("发送音频数据, 状态: $_sessionState, 长度: ${_audioBuffer.length}");
+          _channel!.sink.add(Uint8List.fromList(_audioBuffer));
+          _audioBuffer.clear();
+        }
+      } else {
+        // 麦克风关闭时，直接丢弃数据，防止重新打开时堆积
+        if (_audioBuffer.isNotEmpty) {
+          debugPrint("麦克风已关闭，丢弃数据");
+          _audioBuffer.clear();
+        }
+      }
+    } else {
+      // thinking 和 speaking 状态下采集到用户音频不发送给后端，直接丢弃
+      if (_audioBuffer.isNotEmpty) {
+        debugPrint("非发送状态 ($_sessionState)，丢弃数据");
+        _audioBuffer.clear();
+      }
     }
   }
 
   void _hangUp() {
+    _stopRecording();
     _channel?.sink.close();
     Navigator.pushReplacement(
       context,
