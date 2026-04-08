@@ -92,7 +92,9 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     _audioPlayer.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         if (mounted) {
-          debugPrint("音频播放完毕, 状态: ${state.processingState}, _isTurnEnded: $_isTurnEnded");
+          debugPrint(
+            "音频播放完毕, 状态: ${state.processingState}, _isTurnEnded: $_isTurnEnded",
+          );
           // --- 新增：音频播放完毕后，开启 5 秒倒计时淡出字幕 ---
           _subtitleFadeTimer?.cancel();
           _subtitleFadeTimer = Timer(const Duration(seconds: 5), () {
@@ -244,7 +246,8 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
             _isTurnEnded = true;
           });
           // 如果当前没有在播放音频，或者播放器已经完成了，直接转换回 idle
-          if (!_audioPlayer.playing || _audioPlayer.processingState == ProcessingState.completed) {
+          if (!_audioPlayer.playing ||
+              _audioPlayer.processingState == ProcessingState.completed) {
             _transitionToIdle();
           }
           break;
@@ -357,15 +360,19 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
       );
 
       _recordSubscription?.cancel();
-      _recordSubscription = stream.listen((data) {
-        if (data.isNotEmpty) {
-          _audioBuffer.addAll(data);
-        }
-      }, onError: (err) {
-        debugPrint("录音流发生错误: $err");
-      }, onDone: () {
-        debugPrint("录音流意外结束");
-      });
+      _recordSubscription = stream.listen(
+        (data) {
+          if (data.isNotEmpty) {
+            _audioBuffer.addAll(data);
+          }
+        },
+        onError: (err) {
+          debugPrint("录音流发生错误: $err");
+        },
+        onDone: () {
+          debugPrint("录音流意外结束");
+        },
+      );
 
       _sendBufferTimer?.cancel();
       _sendBufferTimer = Timer.periodic(const Duration(milliseconds: 500), (
@@ -419,8 +426,11 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
   }
 
   void _hangUp() {
+    //  先停止录音
     _stopRecording();
-    _channel?.sink.close();
+    // 优雅关闭 WebSocket，明确带状态码和原因
+    _channel?.sink.close(1000, "User hung up");
+    //  最后再跳转页面（确保清理完成后再离开）
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const AiHomePage()),
