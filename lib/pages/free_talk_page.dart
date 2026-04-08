@@ -87,6 +87,16 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
             _isAiSpeaking = false;
             _statusText = '正在听取您的声音...';
           });
+
+          // --- 新增：音频播放完毕后，开启 5 秒倒计时淡出字幕 ---
+          _subtitleFadeTimer?.cancel(); // 取消之前的计时器
+          _subtitleFadeTimer = Timer(const Duration(seconds: 5), () {
+            if (mounted) {
+              setState(() {
+                _subtitleOpacity = 0.0;
+              });
+            }
+          });
         }
       }
     });
@@ -178,7 +188,9 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
             _statusText = '正在听取您的声音...';
             _subtitles.clear();
             _isAiSpeaking = false;
+            _subtitleOpacity = 1.0; // 重置透明度供下一轮使用
           });
+          _subtitleFadeTimer?.cancel(); // 用户说话了，停止之前的淡出计时
           _audioPlayer.stop();
           _playlist.clear();
           break;
@@ -187,10 +199,6 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
           setState(() {
             _subtitles.write(json['text'] ?? '');
             _subtitleOpacity = 1.0;
-          });
-          _subtitleFadeTimer?.cancel();
-          _subtitleFadeTimer = Timer(const Duration(seconds: 5), () {
-            if (mounted) setState(() => _subtitleOpacity = 0.0);
           });
           break;
 
