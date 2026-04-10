@@ -758,16 +758,20 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
             _isPlayingMyAudio, // 传递播放状态
           ),
         ),
-        const SizedBox(height: 12),
-        GestureDetector(
-          onTap: _playHowToFixAudio,
-          child: _buildComparisonRow(
-            Icons.auto_awesome,
-            'AI 反馈音频',
-            const Color(0xFFFDC003),
-            _isPlayingHowToFix,
+
+        // AI 反馈按钮 (仅在有纠错音频时才显示)
+        if (_howToFixUrl.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: _playHowToFixAudio,
+            child: _buildComparisonRow(
+              Icons.auto_awesome,
+              'AI 反馈音频',
+              const Color(0xFFFDC003),
+              _isPlayingHowToFix,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
