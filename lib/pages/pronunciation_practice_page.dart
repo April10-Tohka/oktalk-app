@@ -1,12 +1,13 @@
-import 'dart:ui';
-import 'dart:io';
 import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:record/record.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
+import 'dart:ui';
+
 import 'package:audioplayers/audioplayers.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
 
 import 'pronunciation_summary_page.dart';
 
@@ -39,6 +40,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
   bool _isPlayingStandard = false;
   bool _isPlayingMyAudio = false;
   bool _isPlayingAiAudio = false;
+  bool _isPlayingHowToFix = false;
   bool _isRequesting = false;
 
   static const String _apiBaseUrl = String.fromEnvironment(
@@ -66,6 +68,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
   String _correctionHint = '';
   String _myAudioUrl = '';
   String _aiAudioUrl = '';
+  String _howToFixUrl = '';
 
   @override
   void initState() {
@@ -75,14 +78,15 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
     _type = widget.type;
     _topic = widget.topic;
 
-    if(_type=="word"){
-      _practiceType="单词";
-    }else if(_type=="sentence"){
-      _practiceType="句子";
+    if (_type == "word") {
+      _practiceType = "单词";
+    } else if (_type == "sentence") {
+      _practiceType = "句子";
     }
     _content = (_currentItem['content'] ?? '').toString();
     _standardAudioUrl = (_currentItem['standard_audio_url'] ?? '').toString();
-    _itemIndex = int.tryParse((_currentItem['item_index'] ?? 0).toString()) ?? 0;
+    _itemIndex =
+        int.tryParse((_currentItem['item_index'] ?? 0).toString()) ?? 0;
     _totalItems =
         int.tryParse((_currentItem['total_items'] ?? 0).toString()) ?? 0;
 
@@ -93,6 +97,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
           _isPlayingStandard = false;
           _isPlayingMyAudio = false;
           _isPlayingAiAudio = false;
+          _isPlayingHowToFix = false;
         });
       }
     });
@@ -170,6 +175,30 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
 
     setState(() => _isPlayingAiAudio = true);
     await _audioPlayer.play(UrlSource(_aiAudioUrl));
+  }
+
+  // 播放如何纠正音频 (How To Fix)
+  Future<void> _playHowToFixAudio() async {
+    if (_howToFixUrl.isEmpty) return;
+
+    if (_isPlayingHowToFix) {
+      await _audioPlayer.stop();
+      setState(() => _isPlayingHowToFix = false);
+      return;
+    }
+
+    // 停止其他正在播放的所有音频
+    if (_isPlayingStandard || _isPlayingMyAudio || _isPlayingAiAudio) {
+      await _audioPlayer.stop();
+      setState(() {
+        _isPlayingStandard = false;
+        _isPlayingMyAudio = false;
+        _isPlayingAiAudio = false;
+      });
+    }
+
+    setState(() => _isPlayingHowToFix = true);
+    await _audioPlayer.play(UrlSource(_howToFixUrl));
   }
 
   // ==== 录音控制 ====
@@ -287,10 +316,10 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
 
       final stars =
           int.tryParse((evaluation['stars'] ?? 0).toString())?.clamp(0, 5) ?? 0;
-      final suggestion = (aiFeedback['suggestion'] ?? '').toString();
+      final suggestion = (aiFeedback['how_to_fix'] ?? '').toString();
       final userAudioUrl = (data['user_audio_url'] ?? '').toString();
       final aiAudioUrl = (aiFeedback['ai_audio_url'] ?? '').toString();
-
+      final howToFixUrl = (aiFeedback['how_to_fix_url'] ?? '').toString();
       if (!mounted) return;
       setState(() {
         _hasResult = true;
@@ -299,16 +328,26 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
         _correctionHint = suggestion;
         _myAudioUrl = userAudioUrl;
         _aiAudioUrl = aiAudioUrl;
+        _howToFixUrl = howToFixUrl;
       });
 
-      // 评测完成后自动播放 AI 音频
+      // 1. 首先开始播放 AI 音频
       await _playAiAudio();
+
+      // 2. 关键：等待 AI 音频播放完成
+      // 使用 .first 监听下一次播放完成的信号，确保顺序
+      await _audioPlayer.onPlayerComplete.first;
+
+      // 3. AI 音频播完后，自动播放纠错指导音频 (how_to_fix)
+      if (mounted) {
+        await _playHowToFixAudio();
+      }
     } catch (e) {
       debugPrint("评测失败: $e");
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('评测失败：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('评测失败：$e')));
     } finally {
       debugPrint("关闭加载对话框");
       if (mounted) {
@@ -322,8 +361,9 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
     if (_isRequesting) return;
     setState(() => _isRequesting = true);
     try {
-      final uri =
-          Uri.parse('$_apiBaseUrl/api/v1/pronunciation/session/advance');
+      final uri = Uri.parse(
+        '$_apiBaseUrl/api/v1/pronunciation/session/advance',
+      );
       final res = await http.post(
         uri,
         headers: const {'Content-Type': 'application/json'},
@@ -357,7 +397,8 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
       final nextIndex =
           int.tryParse((nextItem['item_index'] ?? 0).toString()) ?? _itemIndex;
       final nextTotal =
-          int.tryParse((nextItem['total_items'] ?? 0).toString()) ?? _totalItems;
+          int.tryParse((nextItem['total_items'] ?? 0).toString()) ??
+          _totalItems;
 
       if (!mounted) return;
       await _audioPlayer.stop();
@@ -374,6 +415,8 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
         _correctionHint = '';
         _myAudioUrl = '';
         _aiAudioUrl = '';
+        _howToFixUrl = ''; // 新增
+        _isPlayingHowToFix = false; // 新增
 
         _isPlayingStandard = false;
         _isPlayingMyAudio = false;
@@ -381,9 +424,9 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('获取下一条失败：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('获取下一条失败：$e')));
     } finally {
       if (mounted) setState(() => _isRequesting = false);
     }
@@ -509,7 +552,9 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
               height: 4,
               decoration: const BoxDecoration(
                 color: Color(0xFFFDC003),
-                borderRadius: BorderRadius.horizontal(right: Radius.circular(2)),
+                borderRadius: BorderRadius.horizontal(
+                  right: Radius.circular(2),
+                ),
                 boxShadow: [BoxShadow(color: Color(0x80FDC003), blurRadius: 8)],
               ),
             ),
@@ -554,9 +599,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
                   color: Colors.black,
                 ),
                 label: Text(
-                  _isPlayingStandard
-                      ? '停止播放'
-                      : '播放标准音频',
+                  _isPlayingStandard ? '停止播放' : '播放标准音频',
                   style: const TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.bold,
@@ -663,9 +706,7 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
                   child: Icon(
                     Icons.star,
                     size: 36,
-                    color: enabled
-                        ? const Color(0xFFFDC003)
-                        : Colors.white24,
+                    color: enabled ? const Color(0xFFFDC003) : Colors.white24,
                   ),
                 );
               },
@@ -719,12 +760,12 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
         ),
         const SizedBox(height: 12),
         GestureDetector(
-          onTap: _playAiAudio,
+          onTap: _playHowToFixAudio,
           child: _buildComparisonRow(
             Icons.auto_awesome,
             'AI 反馈音频',
             const Color(0xFFFDC003),
-            _isPlayingAiAudio,
+            _isPlayingHowToFix,
           ),
         ),
       ],
