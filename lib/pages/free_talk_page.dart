@@ -116,6 +116,12 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
 
   void _transitionToIdle() {
     debugPrint("状态转换: 从 $_sessionState 转换为 idle");
+    // --- 新增：向后端发送播放完毕的信号 ---
+    if (_channel != null) {
+      final doneMessage = jsonEncode({"type": "audio_playback_done"});
+      debugPrint("发送给后端: $doneMessage");
+      _channel!.sink.add(doneMessage);
+    }
     setState(() {
       _sessionState = VoiceSessionState.idle;
       _statusText = '有什么可以帮您的？';
