@@ -23,6 +23,7 @@ const double br15 = 15;
 const double br20 = 20;
 const double fs10 = 10;
 const double fs12 = 12;
+const double fs14 = 14;
 const double fs15 = 15;
 const double fs16 = 16;
 const double fs20 = 20;
