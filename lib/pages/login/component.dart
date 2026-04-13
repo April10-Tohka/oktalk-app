@@ -234,7 +234,7 @@ class Component extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const FrameComponent(), // 登录表单
-                    const SizedBox(height: 130), // 调整表单和第三方登录的间距
+                    const SizedBox(height: 110), // 调整表单和第三方登录的间距
                     const FrameComponent1(), // 其他登录方式
                   ],
                 ),
