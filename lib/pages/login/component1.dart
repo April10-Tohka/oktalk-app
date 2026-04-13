@@ -3,6 +3,8 @@ import 'dart:convert'; // 用于 JSON 编解码
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; // 引入 http 库
+import 'package:oktalk/pages/ai_home_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'tokens.dart';
 
@@ -144,18 +146,27 @@ class _Component1State extends State<Component1> {
       final resBody = jsonDecode(utf8.decode(response.bodyBytes));
 
       if (response.statusCode == 200) {
-        // 登录成功
+        // 1. 提取 Token 数据
+        final data = resBody['data'];
+        final accessToken = data['access_token'];
+        final refreshToken = data['refresh_token'];
+
+        // 2. 持久化存储
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('access_token', accessToken);
+        await prefs.setString('refresh_token', refreshToken);
+
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('登录成功！')));
 
-        // TODO: 从 resBody 中提取 token 并持久化保存 (比如使用 shared_preferences)
-        // String accessToken = resBody['data']['access_token']; (根据你的 Response Wrapper 调整提取路径)
-
-        // TODO: 路由跳转到 App 首页
-        // Navigator.pushReplacementNamed(context, '/home');
+        // 3. 路由跳转 (使用 pushReplacement 避免用户按返回键回到登录页)
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AiHomePage()),
+        );
       } else {
-        // 登录失败（如验证码错误等）
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(resBody['message'] ?? '登录失败')));
