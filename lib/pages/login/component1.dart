@@ -7,83 +7,132 @@ class Component1 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 整个白底卡片的宽度
+    double cardWidth = width322;
+    // 表单内容的宽度
+    double contentWidth = width285;
+
     return Stack(
       clipBehavior: Clip.none,
-      alignment: Alignment.center,
+      alignment: Alignment.topCenter,
       children: [
+        // 主体表单容器
         Container(
-          width: width322,
-          height: 131,
+          width: cardWidth,
+          // 【关键修改1】删除写死的 height: 131，让内部 Column 自动撑开高度
           padding: const EdgeInsets.only(
-            top: padding14,
+            top: 30, // 【关键修改2】增加上边距，解决太贴上面的问题
             left: padding19,
             right: padding18,
+            bottom: 40, // 底部留出空间给外挂的登录按钮
           ),
-          child: Flex(
-            spacing: gap19,
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // 让 Column 高度包裹内容
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.start,
-            direction: Axis.vertical,
             children: [
+              // --- 手机号部分 ---
+              const Text(
+                '手机号',
+                style: TextStyle(
+                  fontSize: fs15,
+                  fontFamily: 'PingFang SC',
+                  color: dimgray100,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 8), // 标签与输入框的间距
+              // 【修复】真正的手机号输入框
               Container(
-                width: 110,
-                height: height22,
-                padding: const EdgeInsets.only(left: padding14),
-                alignment: AlignmentDirectional.topStart,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.topLeft,
-                  child: const Text(
-                    '请输入手机号',
-                    style: TextStyle(
+                width: contentWidth,
+                height: height50,
+                decoration: BoxDecoration(
+                  color: miscellaneousButtonDisabeldBG,
+                  borderRadius: BorderRadius.circular(br15),
+                ),
+                child: const TextField(
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    hintText: '请输入手机号',
+                    hintStyle: TextStyle(
                       fontSize: fs16,
                       fontFamily: 'PingFang SC',
                       fontWeight: FontWeight.w300,
-                      height: 1.38,
                       color: dimgray300,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: padding14,
+                      vertical: 12,
                     ),
                   ),
                 ),
               ),
+
+              const SizedBox(height: 20), // 手机号与验证码区域的间距
+              // --- 验证码部分 ---
+              const Text(
+                '验证码',
+                style: TextStyle(
+                  fontSize: fs15,
+                  fontFamily: 'PingFang SC',
+                  color: dimgray100,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // 验证码输入框 + 发送按钮 (保持刚才完美的响应式 Row)
               SizedBox(
-                width: width285,
-                height: 76,
-                child: Flex(
-                  spacing: gap5,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  direction: Axis.vertical,
+                width: contentWidth,
+                child: Row(
                   children: [
-                    const Text(
-                      '验证码',
-                      style: TextStyle(
-                        fontSize: fs15,
-                        fontFamily: 'PingFang SC',
-                        height: 1.4,
-                        color: dimgray100,
+                    Expanded(
+                      child: Container(
+                        height: height50,
+                        decoration: BoxDecoration(
+                          color: miscellaneousButtonDisabeldBG,
+                          borderRadius: BorderRadius.circular(br15),
+                        ),
+                        child: const TextField(
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            hintText: '请输入验证码',
+                            hintStyle: TextStyle(
+                              fontSize: fs16,
+                              fontFamily: 'PingFang SC',
+                              fontWeight: FontWeight.w300,
+                              color: dimgray300,
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: padding14,
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                    TextField(
-                      expands: true,
-                      maxLines: null,
-                      decoration: InputDecoration(
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.transparent),
-                          borderRadius: BorderRadius.all(Radius.circular(br15)),
+                    const SizedBox(width: 8),
+                    // 静态发送验证码按钮 (包了 GestureDetector 准备做第二步)
+                    GestureDetector(
+                      onTap: () {
+                        // TODO: 第二步的倒计时逻辑
+                      },
+                      child: Container(
+                        width: 100,
+                        height: height50,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: miscellaneousButtonDisabeldBG,
+                          borderRadius: BorderRadius.circular(br15),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.transparent),
-                          borderRadius: BorderRadius.all(Radius.circular(br15)),
-                        ),
-                        fillColor: miscellaneousButtonDisabeldBG,
-                        filled: true,
-                        contentPadding: EdgeInsets.only(
-                          top: padding0,
-                          bottom: padding0,
-                        ),
-                        constraints: BoxConstraints.expand(
-                          width: width285,
-                          height: height50,
+                        child: const Text(
+                          '发送验证码',
+                          style: TextStyle(
+                            fontSize: fs14,
+                            fontFamily: 'PingFang SC',
+                            color: dimgray100,
+                          ),
                         ),
                       ),
                     ),
@@ -93,126 +142,28 @@ class Component1 extends StatelessWidget {
             ],
           ),
         ),
+
+        // --- 登录按钮 ---
+        // 使用 Positioned 挂在整个卡片的底部下方
         Positioned(
-          top: 0,
-          right: 18,
-          child: TextField(
-            expands: true,
-            maxLines: null,
-            decoration: InputDecoration(
-              enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.transparent),
-                borderRadius: BorderRadius.all(Radius.circular(br15)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.transparent),
-                borderRadius: BorderRadius.all(Radius.circular(br15)),
-              ),
-              fillColor: miscellaneousButtonDisabeldBG,
-              filled: true,
-              contentPadding: EdgeInsets.only(top: padding0, bottom: padding0),
-              constraints: BoxConstraints.expand(
-                width: width285,
-                height: height50,
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: -115,
-          child: RichText(
-            text: const TextSpan(
-              style: TextStyle(
-                fontSize: fs12,
-                fontFamily: 'PingFang SC',
-                fontWeight: FontWeight.w300,
-                height: 1.42,
-              ),
-              children: [
-                TextSpan(
-                  style: TextStyle(color: gray100),
-                  text: '登录即代表同意',
-                ),
-                TextSpan(
-                  style: TextStyle(color: darkslategray),
-                  text: '《用户协议》',
-                ),
-                TextSpan(
-                  style: TextStyle(color: gray100),
-                  text: '和',
-                ),
-                TextSpan(
-                  style: TextStyle(color: darkslategray),
-                  text: '《隐私协议》',
-                ),
-              ],
-            ),
-          ),
-        ),
-        Positioned(
-          left: 19,
-          bottom: -115,
+          bottom: -28, // 调整数值以让按钮悬浮在一半的位置
           child: Container(
-            width: width16,
-            height: height16,
-            decoration: const BoxDecoration(
-              border: Border.fromBorderSide(
-                BorderSide(width: 2, color: gainsboro),
-              ),
-              borderRadius: BorderRadius.all(Radius.circular(58.5)),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: -77,
-          right: 18,
-          child: Container(
-            width: width285,
+            width: contentWidth,
             height: 56,
+            alignment: Alignment.center,
             decoration: const BoxDecoration(
-              boxShadow: shadowDrop,
+              boxShadow: shadowDrop, // 确保 tokens.dart 里有这个定义
               borderRadius: BorderRadius.all(Radius.circular(br15)),
-              gradient: gradient1,
+              gradient: gradient1, // 确保 tokens.dart 里有这个定义
             ),
-          ),
-        ),
-        const Positioned(
-          bottom: -64,
-          child: Text(
-            '登录',
-            style: TextStyle(
-              fontSize: fs20,
-              fontFamily: 'PingFang SC',
-              fontWeight: FontWeight.w500,
-              height: 1.4,
-              color: white200,
-            ),
-          ),
-        ),
-        const Positioned(
-          left: 33,
-          bottom: 14,
-          child: Text(
-            '请输入验证码',
-            style: TextStyle(
-              fontSize: fs16,
-              fontFamily: 'PingFang SC',
-              fontWeight: FontWeight.w300,
-              height: 1.38,
-              color: dimgray300,
-            ),
-          ),
-        ),
-        const Positioned(
-          top: -26,
-          left: 19,
-          child: Text(
-            '手机号',
-            style: TextStyle(
-              fontSize: fs15,
-              fontFamily: 'PingFang SC',
-              height: 1.4,
-              color: dimgray100,
+            child: const Text(
+              '登录',
+              style: TextStyle(
+                fontSize: fs20,
+                fontFamily: 'PingFang SC',
+                fontWeight: FontWeight.w500,
+                color: white200,
+              ),
             ),
           ),
         ),
