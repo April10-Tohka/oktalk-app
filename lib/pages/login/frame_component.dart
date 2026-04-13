@@ -11,13 +11,13 @@ class FrameComponent extends StatelessWidget {
     return Container(
       width: 357,
       height: 332,
-      padding: const EdgeInsets.only(left: 35, bottom: 86),
+      padding: const EdgeInsets.only(left: 35, bottom: 60),
       alignment: AlignmentDirectional.topStart,
       child: SizedBox(
         width: width322,
         height: 246,
         child: Flex(
-          spacing: 90,
+          spacing: 40,
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.start,
           direction: Axis.vertical,
@@ -30,44 +30,32 @@ class FrameComponent extends StatelessWidget {
               child: SizedBox(
                 width: 236.7,
                 height: height25,
-                child: Flex(
-                  spacing: 111.1,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
+                  // 改用 Row，更直观
                   mainAxisAlignment: MainAxisAlignment.start,
-                  direction: Axis.horizontal,
                   children: [
-                    Container(
-                      width: 62.9,
-                      height: height25,
-                      padding: const EdgeInsets.only(top: padding4),
-                      alignment: AlignmentDirectional.topStart,
-                      child: const SizedBox(
-                        width: 62.9,
-                        height: 21,
-                        child: Text(
-                          '快速登陆\n',
-                          style: TextStyle(
-                            fontSize: fs16,
-                            fontFamily: 'PingFang SC',
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 11.875,
-                            color: orange200,
-                          ),
-                        ),
+                    // 快速登陆
+                    const Text(
+                      '快速登陆',
+                      style: TextStyle(
+                        fontSize: fs16,
+                        fontFamily: 'PingFang SC',
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.5,
+                        color: orange200,
                       ),
                     ),
-                    const SizedBox(
-                      width: 62.7,
-                      height: 21,
-                      child: Text(
-                        '账号注册\n',
-                        style: TextStyle(
-                          fontSize: fs16,
-                          fontFamily: 'PingFang SC',
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 11.875,
-                          color: orange200,
-                        ),
+
+                    const Spacer(), // ← 关键：自动推开两个文字
+                    // 账号注册（往右移）
+                    const Text(
+                      '账号注册',
+                      style: TextStyle(
+                        fontSize: fs16,
+                        fontFamily: 'PingFang SC',
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.5,
+                        color: orange200,
                       ),
                     ),
                   ],
