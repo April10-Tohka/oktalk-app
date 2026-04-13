@@ -55,7 +55,7 @@ class Component1 extends StatelessWidget {
                   direction: Axis.vertical,
                   children: [
                     const Text(
-                      '密码',
+                      '验证码',
                       style: TextStyle(
                         fontSize: fs15,
                         fontFamily: 'PingFang SC',
@@ -193,7 +193,7 @@ class Component1 extends StatelessWidget {
           left: 33,
           bottom: 14,
           child: Text(
-            '请输入密码',
+            '请输入验证码',
             style: TextStyle(
               fontSize: fs16,
               fontFamily: 'PingFang SC',
@@ -207,7 +207,7 @@ class Component1 extends StatelessWidget {
           top: -26,
           left: 19,
           child: Text(
-            '用户名/手机号',
+            '手机号',
             style: TextStyle(
               fontSize: fs15,
               fontFamily: 'PingFang SC',
