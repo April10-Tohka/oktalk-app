@@ -1,36 +1,77 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'tokens.dart';
 
-class Component1 extends StatelessWidget {
+// 【升级为 StatefulWidget 以支持倒计时状态更新】
+class Component1 extends StatefulWidget {
   const Component1({super.key});
 
   @override
+  State<Component1> createState() => _Component1State();
+}
+
+class _Component1State extends State<Component1> {
+  int _seconds = 60;
+  bool _isCounting = false;
+  Timer? _timer;
+
+  // 倒计时逻辑
+  void _startCountdown() {
+    if (_isCounting) return; // 防止重复点击
+
+    // 输出 Mock 日志
+    debugPrint('Mock: 发送验证码请求开始执行...');
+
+    setState(() {
+      _isCounting = true;
+      _seconds = 60;
+    });
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_seconds > 1) {
+        setState(() {
+          _seconds--;
+        });
+      } else {
+        // 倒计时结束，恢复初始状态
+        _timer?.cancel();
+        setState(() {
+          _isCounting = false;
+          _seconds = 60;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel(); // 页面销毁时务必清理定时器，防止内存泄漏
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // 整个白底卡片的宽度
     double cardWidth = width322;
-    // 表单内容的宽度
     double contentWidth = width285;
 
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.topCenter,
       children: [
-        // 主体表单容器
         Container(
           width: cardWidth,
-          // 【关键修改1】删除写死的 height: 131，让内部 Column 自动撑开高度
           padding: const EdgeInsets.only(
-            top: 30, // 【关键修改2】增加上边距，解决太贴上面的问题
+            top: 30,
             left: padding19,
             right: padding18,
-            bottom: 40, // 底部留出空间给外挂的登录按钮
+            bottom: 40,
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min, // 让 Column 高度包裹内容
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- 手机号部分 ---
               const Text(
                 '手机号',
                 style: TextStyle(
@@ -40,8 +81,7 @@ class Component1 extends StatelessWidget {
                   height: 1.4,
                 ),
               ),
-              const SizedBox(height: 8), // 标签与输入框的间距
-              // 【修复】真正的手机号输入框
+              const SizedBox(height: 8),
               Container(
                 width: contentWidth,
                 height: height50,
@@ -68,8 +108,8 @@ class Component1 extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 20), // 手机号与验证码区域的间距
-              // --- 验证码部分 ---
+              const SizedBox(height: 20),
+
               const Text(
                 '验证码',
                 style: TextStyle(
@@ -81,7 +121,6 @@ class Component1 extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              // 验证码输入框 + 发送按钮 (保持刚才完美的响应式 Row)
               SizedBox(
                 width: contentWidth,
                 child: Row(
@@ -113,11 +152,10 @@ class Component1 extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // 静态发送验证码按钮 (包了 GestureDetector 准备做第二步)
+
+                    // 【关键更新】绑定倒计时逻辑与动态 UI
                     GestureDetector(
-                      onTap: () {
-                        // TODO: 第二步的倒计时逻辑
-                      },
+                      onTap: _isCounting ? null : _startCountdown, // 倒计时期间禁用点击
                       child: Container(
                         width: 100,
                         height: height50,
@@ -126,12 +164,13 @@ class Component1 extends StatelessWidget {
                           color: miscellaneousButtonDisabeldBG,
                           borderRadius: BorderRadius.circular(br15),
                         ),
-                        child: const Text(
-                          '发送验证码',
+                        child: Text(
+                          _isCounting ? '${_seconds}s' : '发送验证码',
                           style: TextStyle(
                             fontSize: fs14,
                             fontFamily: 'PingFang SC',
-                            color: dimgray100,
+                            // 倒计时期间让文字颜色变浅，增强视觉反馈
+                            color: _isCounting ? dimgray300 : dimgray100,
                           ),
                         ),
                       ),
@@ -143,18 +182,16 @@ class Component1 extends StatelessWidget {
           ),
         ),
 
-        // --- 登录按钮 ---
-        // 使用 Positioned 挂在整个卡片的底部下方
         Positioned(
-          bottom: -28, // 调整数值以让按钮悬浮在一半的位置
+          bottom: -28,
           child: Container(
             width: contentWidth,
             height: 56,
             alignment: Alignment.center,
             decoration: const BoxDecoration(
-              boxShadow: shadowDrop, // 确保 tokens.dart 里有这个定义
+              boxShadow: shadowDrop,
               borderRadius: BorderRadius.all(Radius.circular(br15)),
-              gradient: gradient1, // 确保 tokens.dart 里有这个定义
+              gradient: gradient1,
             ),
             child: const Text(
               '登录',

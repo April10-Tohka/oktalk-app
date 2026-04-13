@@ -10,15 +10,9 @@ class FrameComponent1 extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: width390,
-      height: 95,
-      alignment: AlignmentDirectional.topStart,
-      child: Container(
-        width: 289,
-        height: height48,
-        padding: const EdgeInsets.only(left: 101),
-        alignment: AlignmentDirectional.topStart,
-        child: const QQ(),
-      ),
+      // 【关键修改】去掉死高度 height: 95
+      padding: const EdgeInsets.symmetric(horizontal: 40), // 左右对称留白，让内部自然居中
+      child: const QQ(),
     );
   }
 }

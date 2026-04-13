@@ -199,43 +199,44 @@ class Component extends StatelessWidget {
                 ),
               ),
 
-              // 5. 中间主要内容区域（欢迎文字 + 登录表单 + 其他登录方式）
+              // 5. 欢迎文字（保留在上方）
               Positioned(
                 top: 105,
                 left: 0,
-                child: SizedBox(
-                  width: width390,
-                  height: 739,
-                  child: Flex(
-                    spacing: 139,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    direction: Axis.vertical,
-                    children: [
-                      Container(
-                        width: 204,
-                        height: 34,
-                        padding: const EdgeInsets.only(left: 34),
-                        alignment: AlignmentDirectional.topStart,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.topLeft,
-                          child: const Text(
-                            '欢迎来到OKtalk',
-                            style: TextStyle(
-                              fontSize: fs24,
-                              fontFamily: 'PingFang SC',
-                              fontWeight: FontWeight.w300,
-                              height: 1.42,
-                              color: dimgray200,
-                            ),
-                          ),
-                        ),
+                child: Container(
+                  width: 204,
+                  padding: const EdgeInsets.only(left: 34),
+                  alignment: AlignmentDirectional.topStart,
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.topLeft,
+                    child: Text(
+                      '欢迎来到OKtalk',
+                      style: TextStyle(
+                        fontSize: fs24,
+                        fontFamily: 'PingFang SC',
+                        fontWeight: FontWeight.w300,
+                        height: 1.42,
+                        color: dimgray200,
                       ),
-                      const FrameComponent(),
-                      const FrameComponent1(),
-                    ],
+                    ),
                   ),
+                ),
+              ),
+
+              // 6. 核心表单与第三方登录（锁定在背景图的 top: 266 起点）
+              Positioned(
+                top: 266, // 【关键修复】精准对齐底部黄色卡片图片的 top: 266
+                left: 0,
+                right: 0,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const FrameComponent(), // 登录表单
+                    const SizedBox(height: 130), // 调整表单和第三方登录的间距
+                    const FrameComponent1(), // 其他登录方式
+                  ],
                 ),
               ),
             ],
