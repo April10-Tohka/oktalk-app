@@ -1,10 +1,11 @@
 import 'dart:async';
+import 'dart:convert'; // 用于 JSON 编解码
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http; // 引入 http 库
 
 import 'tokens.dart';
 
-// 【升级为 StatefulWidget 以支持倒计时状态更新】
 class Component1 extends StatefulWidget {
   const Component1({super.key});
 
@@ -13,17 +14,81 @@ class Component1 extends StatefulWidget {
 }
 
 class _Component1State extends State<Component1> {
+  // === 1. 新增：控制器与状态变量 ===
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _codeController = TextEditingController();
+
   int _seconds = 60;
   bool _isCounting = false;
+  bool _isLoginLoading = false; // 控制登录按钮的 loading 状态
   Timer? _timer;
 
-  // 倒计时逻辑
+  // TODO: 【注意】配置你的后端 API 基础地址
+  // 如果你在用 Android 模拟器测试本地 Go 服务，请使用 'http://10.0.2.2:8080/api/v1'
+  // 如果是 iOS 模拟器，使用 'http://127.0.0.1:8080/api/v1'
+  // 如果是真机，请使用你电脑的局域网 IP，例如 'http://192.168.1.100:8080/api/v1'
+  static const String _baseUrl = String.fromEnvironment(
+    'OKTALK_API_BASE_URL',
+    defaultValue: 'http://8.155.145.36:8080',
+  );
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _phoneController.dispose(); // 释放控制器
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  // === 2. 新增：校验手机号正则 ===
+  bool _isValidPhone(String phone) {
+    return RegExp(r'^1[3-9]\d{9}$').hasMatch(phone);
+  }
+
+  // === 3. 联调：发送短信验证码 API ===
+  Future<void> _sendSmsCode() async {
+    if (_isCounting) return; // 倒计时中不可点击
+
+    String phone = _phoneController.text.trim();
+    if (!_isValidPhone(phone)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请输入正确的手机号')));
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/v1/auth/sms/send'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'phone': phone}),
+      );
+
+      // 解析后端返回（注意处理中文乱码，使用 utf8.decode）
+      final resBody = jsonDecode(utf8.decode(response.bodyBytes));
+
+      if (response.statusCode == 200) {
+        // 请求成功，开始倒计时
+        _startCountdown();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('验证码已发送')));
+      } else {
+        // 请求失败（如 429 频繁，400 格式错），展示后端返回的 message
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(resBody['message'] ?? '发送失败')));
+      }
+    } catch (e) {
+      debugPrint('发送验证码网络错误: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('网络连接失败，请检查网络')));
+    }
+  }
+
+  // 纯倒计时 UI 逻辑（被 _sendSmsCode 成功后调用）
   void _startCountdown() {
-    if (_isCounting) return; // 防止重复点击
-
-    // 输出 Mock 日志
-    debugPrint('Mock: 发送验证码请求开始执行...');
-
     setState(() {
       _isCounting = true;
       _seconds = 60;
@@ -35,7 +100,6 @@ class _Component1State extends State<Component1> {
           _seconds--;
         });
       } else {
-        // 倒计时结束，恢复初始状态
         _timer?.cancel();
         setState(() {
           _isCounting = false;
@@ -45,10 +109,67 @@ class _Component1State extends State<Component1> {
     });
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel(); // 页面销毁时务必清理定时器，防止内存泄漏
-    super.dispose();
+  // === 4. 联调：短信登录 API ===
+  Future<void> _login() async {
+    if (_isLoginLoading) return;
+
+    String phone = _phoneController.text.trim();
+    String code = _codeController.text.trim();
+
+    if (!_isValidPhone(phone)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请输入正确的手机号')));
+      return;
+    }
+    if (code.length != 6) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请输入6位验证码')));
+      return;
+    }
+
+    setState(() {
+      _isLoginLoading = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/v1/auth/sms/login'),
+        headers: {'Content-Type': 'application/json'},
+        // 可以根据需要传入 platform 或 device_id
+        body: jsonEncode({'phone': phone, 'code': code, 'platform': 'app'}),
+      );
+
+      final resBody = jsonDecode(utf8.decode(response.bodyBytes));
+
+      if (response.statusCode == 200) {
+        // 登录成功
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('登录成功！')));
+
+        // TODO: 从 resBody 中提取 token 并持久化保存 (比如使用 shared_preferences)
+        // String accessToken = resBody['data']['access_token']; (根据你的 Response Wrapper 调整提取路径)
+
+        // TODO: 路由跳转到 App 首页
+        // Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        // 登录失败（如验证码错误等）
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(resBody['message'] ?? '登录失败')));
+      }
+    } catch (e) {
+      debugPrint('登录网络错误: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('网络连接失败，请检查网络')));
+    } finally {
+      setState(() {
+        _isLoginLoading = false;
+      });
+    }
   }
 
   @override
@@ -89,9 +210,12 @@ class _Component1State extends State<Component1> {
                   color: miscellaneousButtonDisabeldBG,
                   borderRadius: BorderRadius.circular(br15),
                 ),
-                child: const TextField(
+                child: TextField(
+                  controller: _phoneController, // 绑定控制器
                   keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
+                  maxLength: 11, // 限制手机号 11 位
+                  decoration: const InputDecoration(
+                    counterText: '', // 隐藏自带的字数统计
                     hintText: '请输入手机号',
                     hintStyle: TextStyle(
                       fontSize: fs16,
@@ -132,9 +256,12 @@ class _Component1State extends State<Component1> {
                           color: miscellaneousButtonDisabeldBG,
                           borderRadius: BorderRadius.circular(br15),
                         ),
-                        child: const TextField(
+                        child: TextField(
+                          controller: _codeController, // 绑定控制器
                           keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
+                          maxLength: 6, // 限制验证码 6 位
+                          decoration: const InputDecoration(
+                            counterText: '',
                             hintText: '请输入验证码',
                             hintStyle: TextStyle(
                               fontSize: fs16,
@@ -153,9 +280,9 @@ class _Component1State extends State<Component1> {
                     ),
                     const SizedBox(width: 8),
 
-                    // 【关键更新】绑定倒计时逻辑与动态 UI
+                    // 修改为调用 API 方法 _sendSmsCode
                     GestureDetector(
-                      onTap: _isCounting ? null : _startCountdown, // 倒计时期间禁用点击
+                      onTap: _isCounting ? null : _sendSmsCode,
                       child: Container(
                         width: 100,
                         height: height50,
@@ -169,7 +296,6 @@ class _Component1State extends State<Component1> {
                           style: TextStyle(
                             fontSize: fs14,
                             fontFamily: 'PingFang SC',
-                            // 倒计时期间让文字颜色变浅，增强视觉反馈
                             color: _isCounting ? dimgray300 : dimgray100,
                           ),
                         ),
@@ -184,23 +310,39 @@ class _Component1State extends State<Component1> {
 
         Positioned(
           bottom: -28,
-          child: Container(
-            width: contentWidth,
-            height: 56,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              boxShadow: shadowDrop,
-              borderRadius: BorderRadius.all(Radius.circular(br15)),
-              gradient: gradient1,
-            ),
-            child: const Text(
-              '登录',
-              style: TextStyle(
-                fontSize: fs20,
-                fontFamily: 'PingFang SC',
-                fontWeight: FontWeight.w500,
-                color: white200,
+          // 为登录按钮包裹 GestureDetector
+          child: GestureDetector(
+            onTap: _login, // 点击触发登录请求
+            child: Container(
+              width: contentWidth,
+              height: 56,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                boxShadow: shadowDrop,
+                borderRadius: const BorderRadius.all(Radius.circular(br15)),
+                // loading 时置灰或者保持渐变均可，这里保持渐变体验更好
+                gradient: _isLoginLoading ? null : gradient1,
+                color: _isLoginLoading ? dimgray300 : null,
               ),
+              // 如果在请求中，显示菊花 Loading，否则显示“登录”文字
+              child: _isLoginLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: white200,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : const Text(
+                      '登录',
+                      style: TextStyle(
+                        fontSize: fs20,
+                        fontFamily: 'PingFang SC',
+                        fontWeight: FontWeight.w500,
+                        color: white200,
+                      ),
+                    ),
             ),
           ),
         ),
