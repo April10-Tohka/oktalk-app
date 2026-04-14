@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../theme/tokens.dart';
+import 'tokens.dart';
 
-class FrameComponent31 extends StatelessWidget {
-  const FrameComponent31({super.key});
+class FrameComponent1 extends StatelessWidget {
+  const FrameComponent1({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +39,7 @@ class FrameComponent31 extends StatelessWidget {
                       fontFamily: 'PingFang SC',
                       fontWeight: FontWeight.w600,
                       height: 1.9,
-                      color: yellowgreen100,
+                      color: yellowgreen200,
                     ),
                   ),
                 ),
@@ -63,7 +63,7 @@ class FrameComponent31 extends StatelessWidget {
                           width: 184,
                           height: height138,
                           child: Image(
-                            image: AssetImage('assets/-15@2x.png'),
+                            image: AssetImage('assets/images/home/-15@2x.png'),
                             fit: BoxFit.cover,
                           ),
                         ),
@@ -119,7 +119,7 @@ class FrameComponent31 extends StatelessWidget {
                                               fontWeight: FontWeight.w700,
                                               height: 1.11,
                                               letterSpacing: 16.328,
-                                              color: darkorange100,
+                                              color: darkorange200,
                                             ),
                                           ),
                                         ],
@@ -154,7 +154,7 @@ class FrameComponent31 extends StatelessWidget {
                                               height: height37,
                                               child: Image(
                                                 image: AssetImage(
-                                                  'assets/-17@2x.png',
+                                                  'assets/images/home/-17@2x.png',
                                                 ),
                                                 fit: BoxFit.cover,
                                               ),
@@ -168,7 +168,7 @@ class FrameComponent31 extends StatelessWidget {
                                               height: 107,
                                               child: Image(
                                                 image: AssetImage(
-                                                  'assets/3D-11@2x.png',
+                                                  'assets/images/home/3D-1@2x.png',
                                                 ),
                                                 fit: BoxFit.cover,
                                               ),
@@ -187,7 +187,9 @@ class FrameComponent31 extends StatelessWidget {
                               bottom: 0,
                               right: 0,
                               child: Image(
-                                image: AssetImage('assets/-16@2x.png'),
+                                image: AssetImage(
+                                  'assets/images/home/-16@2x.png',
+                                ),
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -207,7 +209,7 @@ class FrameComponent31 extends StatelessWidget {
                         width: 203,
                         height: height138,
                         child: Image(
-                          image: AssetImage('assets/PK@2x.png'),
+                          image: AssetImage('assets/images/home/PK@2x.png'),
                           fit: BoxFit.cover,
                         ),
                       ),

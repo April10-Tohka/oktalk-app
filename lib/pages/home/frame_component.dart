@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../theme/tokens.dart';
+import 'tokens.dart';
 
-class FrameComponent21 extends StatelessWidget {
-  const FrameComponent21({super.key});
+class FrameComponent extends StatelessWidget {
+  const FrameComponent({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +28,9 @@ class FrameComponent21 extends StatelessWidget {
               alignment: AlignmentDirectional.bottomStart,
               child: ElevatedButton.icon(
                 icon: Image(
-                  image: AssetImage("assets/Bold-Volume-Small@2x.png"),
+                  image: AssetImage(
+                    "assets/images/home/Bold-Volume-Small@2x.png",
+                  ),
                 ),
                 iconAlignment: IconAlignment.start,
                 label: Text(
@@ -46,7 +48,7 @@ class FrameComponent21 extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.all(Radius.circular(br10)),
                   ),
-                  side: BorderSide(width: 3, color: gold100),
+                  side: BorderSide(width: 3, color: gold200),
                   padding: EdgeInsets.only(
                     top: padding2,
                     left: padding10,
@@ -82,7 +84,7 @@ class FrameComponent21 extends StatelessWidget {
                         ),
                         decoration: const BoxDecoration(
                           border: Border.fromBorderSide(
-                            BorderSide(width: 4, color: goldenrod100),
+                            BorderSide(width: 4, color: goldenrod200),
                           ),
                           borderRadius: BorderRadius.all(Radius.circular(br10)),
                           gradient: gradient1,
@@ -119,7 +121,7 @@ class FrameComponent21 extends StatelessWidget {
                                             foreground: Paint()
                                               ..style = PaintingStyle.stroke
                                               ..strokeWidth = 3
-                                              ..color = orange100,
+                                              ..color = orange200,
                                           ),
                                         ),
                                         const Text(
@@ -144,7 +146,9 @@ class FrameComponent21 extends StatelessWidget {
                               bottom: 0,
                               right: 0,
                               child: Image(
-                                image: AssetImage('assets/-14@2x.png'),
+                                image: AssetImage(
+                                  'assets/images/home/-14@2x.png',
+                                ),
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -161,7 +165,7 @@ class FrameComponent21 extends StatelessWidget {
                     width: 113.2,
                     height: 109.9,
                     child: Image(
-                      image: AssetImage('assets/3D@2x.png'),
+                      image: AssetImage('assets/images/home/3D@2x.png'),
                       fit: BoxFit.contain,
                     ),
                   ),

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../theme/tokens.dart';
-import '../widgets/frame_component2.dart';
-import '../widgets/frame_component3.dart';
+import 'frame_component.dart';
+import 'frame_component1.dart';
+import 'tokens.dart';
 
-class Component1 extends StatelessWidget {
-  const Component1({super.key});
+class Component extends StatelessWidget {
+  const Component({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +18,7 @@ class Component1 extends StatelessWidget {
             children: [
               Container(
                 width: double.infinity,
-                height: 844,
+                height: height844,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     transform: GradientRotation(3.14 * 0.5),
@@ -104,7 +104,7 @@ class Component1 extends StatelessWidget {
                               ),
                               decoration: const BoxDecoration(
                                 border: Border.fromBorderSide(
-                                  BorderSide(width: 3, color: gold200),
+                                  BorderSide(width: 3, color: gold300),
                                 ),
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(br15),
@@ -115,7 +115,9 @@ class Component1 extends StatelessWidget {
                                 width: 62,
                                 height: 61,
                                 child: Image(
-                                  image: AssetImage('assets/-4@2x.png'),
+                                  image: AssetImage(
+                                    'assets/images/home/-4@2x.png',
+                                  ),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -168,7 +170,7 @@ class Component1 extends StatelessWidget {
                               ),
                               decoration: const BoxDecoration(
                                 border: Border.fromBorderSide(
-                                  BorderSide(width: 3, color: gold200),
+                                  BorderSide(width: 3, color: gold300),
                                 ),
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(br15),
@@ -179,7 +181,9 @@ class Component1 extends StatelessWidget {
                                 width: 54,
                                 height: 58,
                                 child: Image(
-                                  image: AssetImage('assets/-5@2x.png'),
+                                  image: AssetImage(
+                                    'assets/images/home/-5@2x.png',
+                                  ),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -232,7 +236,7 @@ class Component1 extends StatelessWidget {
                               ),
                               decoration: const BoxDecoration(
                                 border: Border.fromBorderSide(
-                                  BorderSide(width: 3, color: gold200),
+                                  BorderSide(width: 3, color: gold300),
                                 ),
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(br15),
@@ -243,7 +247,9 @@ class Component1 extends StatelessWidget {
                                 width: 57,
                                 height: 51,
                                 child: Image(
-                                  image: AssetImage('assets/-6@2x.png'),
+                                  image: AssetImage(
+                                    'assets/images/home/-6@2x.png',
+                                  ),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -296,7 +302,7 @@ class Component1 extends StatelessWidget {
                               ),
                               decoration: const BoxDecoration(
                                 border: Border.fromBorderSide(
-                                  BorderSide(width: 3, color: gold200),
+                                  BorderSide(width: 3, color: gold300),
                                 ),
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(br15),
@@ -307,7 +313,9 @@ class Component1 extends StatelessWidget {
                                 width: 57,
                                 height: height56,
                                 child: Image(
-                                  image: AssetImage('assets/-7@2x.png'),
+                                  image: AssetImage(
+                                    'assets/images/home/-7@2x.png',
+                                  ),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -351,7 +359,7 @@ class Component1 extends StatelessWidget {
                   width: 36,
                   height: height36,
                   child: Image(
-                    image: AssetImage('assets/OK-1@2x.png'),
+                    image: AssetImage('assets/images/home/OK-1@2x.png'),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -361,9 +369,9 @@ class Component1 extends StatelessWidget {
                 left: 302,
                 child: SizedBox(
                   width: 30,
-                  height: 30,
+                  height: height30,
                   child: Image(
-                    image: AssetImage('assets/11@2x.png'),
+                    image: AssetImage('assets/images/home/1@2x.png'),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -375,7 +383,7 @@ class Component1 extends StatelessWidget {
                   width: 183,
                   height: 183,
                   child: Image(
-                    image: AssetImage('assets/3D-1@2x.png'),
+                    image: AssetImage('assets/images/home/3D-1@2x.png'),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -401,7 +409,7 @@ class Component1 extends StatelessWidget {
                         width: width358,
                         height: 127,
                         child: Image(
-                          image: AssetImage('assets/-10@2x.png'),
+                          image: AssetImage('assets/images/home/-10@2x.png'),
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -413,7 +421,9 @@ class Component1 extends StatelessWidget {
                         width: 187,
                         height: 139,
                         child: Image(
-                          image: AssetImage('assets/Background-Rect@2x.png'),
+                          image: AssetImage(
+                            'assets/images/home/Background-Rect@2x.png',
+                          ),
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -428,7 +438,7 @@ class Component1 extends StatelessWidget {
                   width: width390,
                   height: 147,
                   child: Image(
-                    image: AssetImage('assets/-11@2x.png'),
+                    image: AssetImage('assets/images/home/-11@2x.png'),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -467,17 +477,19 @@ class Component1 extends StatelessWidget {
                                     child: SizedBox(
                                       height: double.infinity,
                                       child: Image(
-                                        image: AssetImage('assets/Time@2x.png'),
+                                        image: AssetImage(
+                                          'assets/images/home/Time@2x.png',
+                                        ),
                                         fit: BoxFit.cover,
                                       ),
                                     ),
                                   ),
                                   const SizedBox(
-                                    width: 172,
+                                    width: width172,
                                     height: height47,
                                     child: Image(
                                       image: AssetImage(
-                                        'assets/Notch-Frame@2x.png',
+                                        'assets/images/home/Notch-Frame@2x.png',
                                       ),
                                       fit: BoxFit.cover,
                                     ),
@@ -500,7 +512,7 @@ class Component1 extends StatelessWidget {
                                             height: height12,
                                             child: Image(
                                               image: AssetImage(
-                                                'assets/Reception@2x.png',
+                                                'assets/images/home/Reception@2x.png',
                                               ),
                                               fit: BoxFit.cover,
                                             ),
@@ -510,7 +522,7 @@ class Component1 extends StatelessWidget {
                                             height: height12,
                                             child: Image(
                                               image: AssetImage(
-                                                'assets/Wi-fi@2x.png',
+                                                'assets/images/home/Wi-fi@2x.png',
                                               ),
                                               fit: BoxFit.cover,
                                             ),
@@ -520,7 +532,7 @@ class Component1 extends StatelessWidget {
                                             height: height13,
                                             child: Image(
                                               image: AssetImage(
-                                                'assets/Battery@2x.png',
+                                                'assets/images/home/Battery@2x.png',
                                               ),
                                               fit: BoxFit.cover,
                                             ),
@@ -581,7 +593,7 @@ class Component1 extends StatelessWidget {
                                                   height: 42,
                                                   child: Image(
                                                     image: AssetImage(
-                                                      'assets/-12@2x.png',
+                                                      'assets/images/home/-12@2x.png',
                                                     ),
                                                     fit: BoxFit.cover,
                                                   ),
@@ -595,7 +607,7 @@ class Component1 extends StatelessWidget {
                                                   height: height39,
                                                   child: Image(
                                                     image: AssetImage(
-                                                      'assets/-13@2x.png',
+                                                      'assets/images/home/-13@2x.png',
                                                     ),
                                                     fit: BoxFit.cover,
                                                   ),
@@ -662,7 +674,7 @@ class Component1 extends StatelessWidget {
                                     ),
                                     Container(
                                       width: 141,
-                                      height: 22,
+                                      height: height22,
                                       padding: const EdgeInsets.only(
                                         top: padding2,
                                       ),
@@ -691,7 +703,7 @@ class Component1 extends StatelessWidget {
                                                 borderRadius: BorderRadius.all(
                                                   Radius.circular(br20),
                                                 ),
-                                                color: goldenrod200,
+                                                color: goldenrod300,
                                               ),
                                               alignment:
                                                   AlignmentDirectional.topStart,
@@ -700,7 +712,7 @@ class Component1 extends StatelessWidget {
                                                 height: height14,
                                                 padding: const EdgeInsets.only(
                                                   top: padding1,
-                                                  left: 22,
+                                                  left: padding22,
                                                   right: padding16,
                                                   bottom: padding3,
                                                 ),
@@ -750,7 +762,7 @@ class Component1 extends StatelessWidget {
                                                 borderRadius: BorderRadius.all(
                                                   Radius.circular(br20),
                                                 ),
-                                                color: goldenrod200,
+                                                color: goldenrod300,
                                               ),
                                               alignment:
                                                   AlignmentDirectional.topStart,
@@ -825,18 +837,18 @@ class Component1 extends StatelessWidget {
                                       fontFamily: 'Alimama FangYuanTi VF',
                                       fontWeight: FontWeight.w500,
                                       height: 2.8,
-                                      color: dimgray,
+                                      color: dimgray200,
                                     ),
                                     textAlign: TextAlign.right,
                                   ),
                                 ),
                               ),
                             ),
-                            const FrameComponent21(),
+                            const FrameComponent(),
                           ],
                         ),
                       ),
-                      const FrameComponent31(),
+                      const FrameComponent1(),
                     ],
                   ),
                 ),

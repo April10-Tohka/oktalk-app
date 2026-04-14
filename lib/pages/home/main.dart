@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/component.dart';
-import 'screens/component1.dart';
+import 'component.dart';
 
 void main() {
   runApp(const MainApp());
@@ -19,8 +18,7 @@ class MainApp extends StatelessWidget {
 
       initialRoute: '/',
       routes: <String, WidgetBuilder>{
-        '/': (BuildContext context) => const Component1(),
-        '新手引导1_': (BuildContext context) => const Component(),
+        '/': (BuildContext context) => const Component(),
       },
     );
   }
