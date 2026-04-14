@@ -3,7 +3,6 @@ import 'dart:convert'; // 用于 JSON 编解码
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; // 引入 http 库
-import 'package:oktalk/pages/ai_home_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'tokens.dart';
@@ -162,10 +161,7 @@ class _Component1State extends State<Component1> {
         ).showSnackBar(const SnackBar(content: Text('登录成功！')));
 
         // 3. 路由跳转 (使用 pushReplacement 避免用户按返回键回到登录页)
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AiHomePage()),
-        );
+        Navigator.pushReplacementNamed(context, '/beginner1');
       } else {
         ScaffoldMessenger.of(
           context,

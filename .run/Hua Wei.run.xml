@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Hua Wei" type="FlutterRunConfigurationType" factoryName="Flutter">
-    <option name="additionalArgs" value="--dart-define=OKTALK_API_BASE_URL=http://192.168.0.105:8080" />
+    <option name="additionalArgs" value="--dart-define=OKTALK_API_BASE_URL=http://192.168.0.100:8080" />
     <option name="filePath" value="$PROJECT_DIR$/lib/main.dart" />
     <method v="2" />
   </configuration>

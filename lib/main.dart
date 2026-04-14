@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'pages/ai_home_page.dart';
-import 'pages/login/component.dart';
+import 'pages/login/component.dart' as login;
+import 'pages/guide1/component.dart' as guide1;
+import 'pages/guide2/component.dart' as guide2;
+import 'pages/guide3/component.dart' as guide3;
+import 'pages/shanpindonghua/component.dart' as splash;
+import 'pages/beginner1/screens/component.dart' as beginner1;
 
 void main() {
   runApp(const MyApp());
@@ -19,13 +24,15 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.green,
         scaffoldBackgroundColor: const Color(0xFFE8F5E9),
       ),
-      initialRoute: "/login",
+      initialRoute: "/",
       routes: <String, WidgetBuilder>{
-        '/login': (BuildContext context) => const Component(), // 登录页
+        '/': (BuildContext context) => const splash.Component(), // 闪屏页
+        '/guide1': (BuildContext context) => const guide1.Component(), // 引导页1
+        '/guide2': (BuildContext context) => const guide2.Component(), // 引导页2
+        '/guide3': (BuildContext context) => const guide3.Component(), // 引导页3
+        '/login': (BuildContext context) => const login.Component(), // 登录页
+        '/beginner1': (BuildContext context) => const beginner1.Component(), // 引导完成后的起始页
         '/ai_home': (BuildContext context) => const AiHomePage(), // 你的 AI 专区首页
-        // 以后继续在这里添加其他页面，例如：
-        // '/profile': (context) => const ProfilePage(),
-        // '/settings': (context) => const SettingsPage(),
       },
     );
   }

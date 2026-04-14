@@ -2,8 +2,24 @@ import 'package:flutter/material.dart';
 
 import 'tokens.dart';
 
-class Component extends StatelessWidget {
+class Component extends StatefulWidget {
   const Component({super.key});
+
+  @override
+  State<Component> createState() => _ComponentState();
+}
+
+class _ComponentState extends State<Component> {
+  @override
+  void initState() {
+    super.initState();
+    // 2-3s 后跳转到 guide1
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/guide1');
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
