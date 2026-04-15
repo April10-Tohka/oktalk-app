@@ -1,226 +1,86 @@
 import 'package:flutter/material.dart';
 
-import 'tokens.dart';
-
 class FrameComponent1 extends StatelessWidget {
   const FrameComponent1({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 374,
-      height: 172,
-      padding: const EdgeInsets.only(left: padding16),
-      alignment: AlignmentDirectional.topStart,
-      child: SizedBox(
-        width: width358,
-        height: 172,
-        child: Flex(
-          spacing: gap15,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.start,
-          direction: Axis.vertical,
-          children: [
-            Container(
-              width: 139,
-              height: height19,
-              padding: const EdgeInsets.only(left: padding24),
-              alignment: AlignmentDirectional.topStart,
-              child: const SizedBox(
-                width: 115,
-                height: height19,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.topLeft,
-                  child: Text(
-                    '海量口语主题等你来挑战',
-                    style: TextStyle(
-                      fontSize: fs10,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: FontWeight.w600,
-                      height: 1.9,
-                      color: yellowgreen200,
-                    ),
-                  ),
-                ),
+    return Row(
+      children: [
+        // 左侧：记忆卡片
+        Expanded(
+          child: Container(
+            height: 140,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              image: const DecorationImage(
+                image: AssetImage('assets/images/home/-16@2x.png'), // 黄色格子背景图
+                fit: BoxFit.fill, // 填满容器
               ),
             ),
-            SizedBox(
-              width: width358,
-              height: height138,
-              child: Flex(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.start,
-                direction: Axis.horizontal,
-                children: [
-                  Stack(
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  top: 16,
+                  left: 12,
+                  child: Stack(
                     children: [
-                      const SizedBox(width: 184, height: height138),
-                      const Positioned(
-                        top: 0,
-                        left: 0,
-                        child: SizedBox(
-                          width: 184,
-                          height: height138,
-                          child: Image(
-                            image: AssetImage('assets/images/home/-15@2x.png'),
-                            fit: BoxFit.cover,
-                          ),
+                      Text(
+                        '记忆\n卡片',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontFamily: 'Alimama ShuHeiTi',
+                          fontWeight: FontWeight.bold,
+                          height: 1.1,
+                          foreground: Paint()
+                            ..style = PaintingStyle.stroke
+                            ..strokeWidth = 3
+                            ..color = Colors.white, // 白色描边
                         ),
                       ),
-                      Positioned(
-                        top: 0,
-                        left: 4,
-                        child: Stack(
-                          children: [
-                            Container(
-                              width: 176,
-                              height: height138,
-                              padding: const EdgeInsets.only(
-                                top: padding14,
-                                bottom: padding2,
-                              ),
-                              child: Flex(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                direction: Axis.vertical,
-                                children: [
-                                  Container(
-                                    width: 61,
-                                    height: height49,
-                                    padding: const EdgeInsets.only(
-                                      left: padding12,
-                                    ),
-                                    alignment: AlignmentDirectional.topStart,
-                                    child: SizedBox(
-                                      width: 49,
-                                      height: height49,
-                                      child: Stack(
-                                        children: [
-                                          Text(
-                                            '记忆卡片',
-                                            style: TextStyle(
-                                              fontSize: fs22,
-                                              fontFamily: 'Alimama ShuHeiTi',
-                                              fontWeight: FontWeight.w700,
-                                              height: 1.11,
-                                              letterSpacing: 16.328,
-                                              foreground: Paint()
-                                                ..style = PaintingStyle.stroke
-                                                ..strokeWidth = 2
-                                                ..color = neutral0,
-                                            ),
-                                          ),
-                                          const Text(
-                                            '记忆卡片',
-                                            style: TextStyle(
-                                              fontSize: fs22,
-                                              fontFamily: 'Alimama ShuHeiTi',
-                                              fontWeight: FontWeight.w700,
-                                              height: 1.11,
-                                              letterSpacing: 16.328,
-                                              color: darkorange200,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    width: width174,
-                                    height: 73,
-                                    alignment: AlignmentDirectional.topStart,
-                                    child: OverflowBox(
-                                      maxHeight: 107,
-                                      alignment: Alignment.bottomLeft,
-                                      child: const Stack(
-                                        children: [
-                                          SizedBox(
-                                            width: width174,
-                                            height: 107,
-                                            child: Flex(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.start,
-                                              direction: Axis.horizontal,
-                                            ),
-                                          ),
-                                          Positioned(
-                                            top: 68,
-                                            left: 0,
-                                            child: SizedBox(
-                                              width: width174,
-                                              height: height37,
-                                              child: Image(
-                                                image: AssetImage(
-                                                  'assets/images/home/-17@2x.png',
-                                                ),
-                                                fit: BoxFit.cover,
-                                              ),
-                                            ),
-                                          ),
-                                          Positioned(
-                                            top: 0,
-                                            left: 46,
-                                            child: SizedBox(
-                                              width: 121,
-                                              height: 107,
-                                              child: Image(
-                                                image: AssetImage(
-                                                  'assets/images/home/3D-1@2x.png',
-                                                ),
-                                                fit: BoxFit.cover,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Positioned(
-                              top: 0,
-                              left: 0,
-                              bottom: 0,
-                              right: 0,
-                              child: Image(
-                                image: AssetImage(
-                                  'assets/images/home/-16@2x.png',
-                                ),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ],
+                      const Text(
+                        '记忆\n卡片',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontFamily: 'Alimama ShuHeiTi',
+                          fontWeight: FontWeight.bold,
+                          height: 1.1,
+                          color: Color(0xFFFF9800), // 橘色文字
                         ),
                       ),
                     ],
                   ),
-                  Container(
-                    width: width174,
-                    height: height138,
-                    alignment: AlignmentDirectional.topStart,
-                    child: OverflowBox(
-                      maxWidth: 203,
-                      alignment: Alignment.topRight,
-                      child: const SizedBox(
-                        width: 203,
-                        height: height138,
-                        child: Image(
-                          image: AssetImage('assets/images/home/PK@2x.png'),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
+                ),
+                // 底部 3D 物品图案
+                Positioned(
+                  bottom: -5,
+                  right: -5,
+                  child: Image.asset(
+                    'assets/images/home/3D-1@2x.png', // 根据你提供的文件猜测是这图
+                    width: 90,
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // 右侧：PK 赛区
+        Expanded(
+          child: Container(
+            height: 140,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              // 原设计图中 PK 赛区的内容已经融合在一张图里了
+              image: const DecorationImage(
+                image: AssetImage('assets/images/home/PK@2x.png'),
+                fit: BoxFit.fill,
               ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
