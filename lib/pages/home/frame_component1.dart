@@ -9,21 +9,34 @@ class FrameComponent1 extends StatelessWidget {
       children: [
         // 左侧：记忆卡片
         Expanded(
-          child: Container(
-            height: 140,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              image: const DecorationImage(
-                image: AssetImage('assets/images/home/-16@2x.png'), // 黄色格子背景图
-                fit: BoxFit.fill, // 填满容器
-              ),
-            ),
+          child: SizedBox(
+            height: 140, // 固定高度，宽度由 Expanded 自适应
             child: Stack(
               clipBehavior: Clip.none,
               children: [
+                // 1. 最底层：斜角边框图 (-15@2x)
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/images/home/-15@2x.png',
+                    fit: BoxFit.fill,
+                  ),
+                ),
+                // 2. 中间层：黄色格子内容底图 (-16@2x)
+                // 原代码中相对边框有轻微的左侧位移
+                Positioned(
+                  top: 0,
+                  bottom: 0,
+                  left: 4,
+                  right: 0,
+                  child: Image.asset(
+                    'assets/images/home/-16@2x.png',
+                    fit: BoxFit.fill,
+                  ),
+                ),
+                // 3. 上层：文字
                 Positioned(
                   top: 16,
-                  left: 12,
+                  left: 14,
                   child: Stack(
                     children: [
                       Text(
@@ -36,7 +49,7 @@ class FrameComponent1 extends StatelessWidget {
                           foreground: Paint()
                             ..style = PaintingStyle.stroke
                             ..strokeWidth = 3
-                            ..color = Colors.white, // 白色描边
+                            ..color = Colors.white,
                         ),
                       ),
                       const Text(
@@ -46,18 +59,18 @@ class FrameComponent1 extends StatelessWidget {
                           fontFamily: 'Alimama ShuHeiTi',
                           fontWeight: FontWeight.bold,
                           height: 1.1,
-                          color: Color(0xFFFF9800), // 橘色文字
+                          color: Color(0xFFFF9800), // 橘色
                         ),
                       ),
                     ],
                   ),
                 ),
-                // 底部 3D 物品图案
+                // 4. 上层：3D 物品图案
                 Positioned(
                   bottom: -5,
                   right: -5,
                   child: Image.asset(
-                    'assets/images/home/3D-1@2x.png', // 根据你提供的文件猜测是这图
+                    'assets/images/home/3D-1@2x.png',
                     width: 90,
                   ),
                 ),
@@ -72,10 +85,9 @@ class FrameComponent1 extends StatelessWidget {
             height: 140,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              // 原设计图中 PK 赛区的内容已经融合在一张图里了
               image: const DecorationImage(
                 image: AssetImage('assets/images/home/PK@2x.png'),
-                fit: BoxFit.fill,
+                fit: BoxFit.fill, // 使用 fill 拉伸填满
               ),
             ),
           ),

@@ -6,7 +6,7 @@ class FrameComponent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.end, // 底部对齐
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         // 左侧：AI助手龙宝 + 按钮
         Expanded(
@@ -22,7 +22,6 @@ class FrameComponent extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              // 将原来游离的龙宝图片移入此处
               Image.asset(
                 'assets/images/home/3Ddragon.png',
                 height: 120,
@@ -59,6 +58,7 @@ class FrameComponent extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
+
         // 右侧：签到-任务中心 卡片
         Expanded(
           flex: 10,
@@ -66,16 +66,27 @@ class FrameComponent extends StatelessWidget {
             height: 160,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              image: const DecorationImage(
-                image: AssetImage('assets/images/home/-14@2x.png'), // 黄橙色格子背景图
-                fit: BoxFit.cover,
-              ),
+              // 【关键还原】增加黄色的粗边框和一点底色
+              border: Border.all(color: const Color(0xFFFFD54F), width: 3),
+              color: const Color(0xFFFFF8E1),
             ),
             child: Stack(
+              clipBehavior: Clip.none,
               children: [
+                // 1. 内部格子背景 (-14@2x)
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(9), // 圆角比外框略小一点
+                    child: Image.asset(
+                      'assets/images/home/-14@2x.png',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                // 2. 文字
                 Positioned(
-                  top: 16,
-                  left: 12,
+                  top: 14,
+                  left: 10,
                   child: Stack(
                     children: [
                       Text(
@@ -88,7 +99,7 @@ class FrameComponent extends StatelessWidget {
                           foreground: Paint()
                             ..style = PaintingStyle.stroke
                             ..strokeWidth = 3
-                            ..color = const Color(0xFFFFB300), // 橘色描边
+                            ..color = const Color(0xFFFFB300),
                         ),
                       ),
                       const Text(
@@ -104,13 +115,11 @@ class FrameComponent extends StatelessWidget {
                     ],
                   ),
                 ),
+                // 3. 3D 日历图标
                 Positioned(
-                  bottom: 0,
-                  right: -5,
-                  child: Image.asset(
-                    'assets/images/home/3D@2x.png',
-                    width: 95,
-                  ), // 3D日历图标
+                  bottom: -10, // 稍微溢出一点增加立体感
+                  right: -8,
+                  child: Image.asset('assets/images/home/3D@2x.png', width: 95),
                 ),
               ],
             ),
