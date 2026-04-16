@@ -123,10 +123,10 @@ class _Component1State extends State<Component1> {
       ).showSnackBar(const SnackBar(content: Text('请输入正确的手机号')));
       return;
     }
-    if (code.length != 6) {
+    if (code.length != 4) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('请输入6位验证码')));
+      ).showSnackBar(const SnackBar(content: Text('请输入4位验证码')));
       return;
     }
 
