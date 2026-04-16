@@ -71,15 +71,26 @@ class Component extends StatelessWidget {
         // 左侧头像与昵称
         Row(
           children: [
+            // 【修改点】嵌套 Container：外层是图片边框，内层是圆形头像
             Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-                image: const DecorationImage(
-                  image: AssetImage('assets/images/home/-12@2x.png'),
-                  fit: BoxFit.cover,
+              width: 50, // 外层边框的大小，可以根据实际切图微调
+              height: 50,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/home/-12@2x.png'), // 边框图
+                  fit: BoxFit.contain,
+                ),
+              ),
+              child: Container(
+                width: 42, // 头像比边框稍小，正好居中嵌进去
+                height: 42,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle, // 确保头像是圆的
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/home/-13@2x.png'), // 人物头像图
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             ),
@@ -114,7 +125,7 @@ class Component extends StatelessWidget {
           children: [
             _buildStatusPill('assets/images/home/OK-1@2x.png', '812'),
             const SizedBox(width: 10),
-            _buildStatusPill('assets/images/home/1@2x.png', '5/10'),
+            _buildStatusPill('assets/images/home/11@2x.png', '5/10'),
           ],
         ),
       ],
@@ -123,34 +134,44 @@ class Component extends StatelessWidget {
 
   // 构建右上角的圆角胶囊
   Widget _buildStatusPill(String iconPath, String value) {
-    return Container(
-      height: 26,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFD54F), // 胶囊底色
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Image.asset(iconPath, width: 20, height: 20),
-          const SizedBox(width: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Alimama ShuHeiTi',
-              ),
+    return Stack(
+      alignment: Alignment.centerLeft, // 图标和胶囊都靠左垂直居中对齐
+      clipBehavior: Clip.none,
+      children: [
+        // 1. 底层的文字胶囊
+        Container(
+          height: 24, // 胶囊整体高度
+          // 【关键点1】margin: 让胶囊整体往右偏移 14px（约图标宽度的一半），给左侧图标留出露出的空间
+          margin: const EdgeInsets.only(left: 14),
+          // 【关键点2】padding: 左侧内边距给够（20px），防止数字被上面的图标挡住
+          padding: const EdgeInsets.only(left: 20, right: 10),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFFFFC107), // 提取UI稿中的橙黄色外框
+              width: 2,
             ),
           ),
-        ],
-      ),
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Alimama ShuHeiTi',
+              color: Colors.black87,
+            ),
+          ),
+        ),
+        // 2. 顶层的图标（自然盖在左边）
+        Image.asset(
+          iconPath,
+          width: 30, // 图标高度 30，比胶囊的 24 稍大，形成突破边框的立体效果
+          height: 30,
+          fit: BoxFit.contain,
+        ),
+      ],
     );
   }
 
