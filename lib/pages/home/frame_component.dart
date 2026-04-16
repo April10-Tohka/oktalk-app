@@ -68,7 +68,16 @@ class FrameComponent extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               // 【关键还原】增加黄色的粗边框和一点底色
               border: Border.all(color: const Color(0xFFFFD54F), width: 3),
-              color: const Color(0xFFFFF8E1),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                stops: [0.0, 0.12, 1.0],
+                colors: [
+                  Color(0xFFFFC53D), // 0% 位置
+                  Color(0xFFFFC743), // 12% 位置
+                  Color(0xFFFDD473), // 100% 位置
+                ],
+              ),
             ),
             child: Stack(
               clipBehavior: Clip.none,
