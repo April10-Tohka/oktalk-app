@@ -149,6 +149,7 @@ class _Component1State extends State<Component1> {
         final data = resBody['data'];
         final accessToken = data['access_token'];
         final refreshToken = data['refresh_token'];
+        final isNewUser = data['is_new_user']; // true = 新用户, false = 老用户
 
         // 2. 持久化存储
         final prefs = await SharedPreferences.getInstance();
@@ -161,7 +162,11 @@ class _Component1State extends State<Component1> {
         ).showSnackBar(const SnackBar(content: Text('登录成功！')));
 
         // 3. 路由跳转 (使用 pushReplacement 避免用户按返回键回到登录页)
-        Navigator.pushReplacementNamed(context, '/beginner1');
+        if (isNewUser == true) {
+          Navigator.pushReplacementNamed(context, '/beginner1');
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
       } else {
         ScaffoldMessenger.of(
           context,
