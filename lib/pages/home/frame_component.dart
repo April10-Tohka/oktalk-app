@@ -22,11 +22,20 @@ class FrameComponent extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              Image.asset(
-                'assets/images/home/3Ddragon.png',
-                height: 120,
-                fit: BoxFit.contain,
+
+              // 【修改点】使用 GestureDetector 包裹龙宝图片，添加点击跳转逻辑
+              GestureDetector(
+                onTap: () {
+                  // 点击触发路由跳转
+                  Navigator.pushNamed(context, '/ai_home');
+                },
+                child: Image.asset(
+                  'assets/images/home/3Ddragon.png',
+                  height: 120,
+                  fit: BoxFit.contain,
+                ),
               ),
+
               const SizedBox(height: 4),
               // 底部语音帮助按钮
               Container(
@@ -66,7 +75,6 @@ class FrameComponent extends StatelessWidget {
             height: 160,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              // 【关键还原】增加黄色的粗边框和一点底色
               border: Border.all(color: const Color(0xFFFFD54F), width: 3),
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
