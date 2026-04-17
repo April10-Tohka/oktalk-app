@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'ai_home_page.dart';
@@ -139,8 +140,20 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
 
   Future<void> _initSession() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token');
+
+      if (accessToken == null) {
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+
       final uri = Uri.parse('$_apiBaseUrl/api/v1/chat/session/start');
-      final response = await http.post(uri);
+      final response = await http.post(
+        uri,
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -184,11 +197,18 @@ class _FreeTalkPageState extends State<FreeTalkPage> {
     return '$m:$s';
   }
 
-  void _connectWebSocket() {
+  void _connectWebSocket() async {
     if (_sessionId == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final accessToken = prefs.getString('access_token');
 
+    if (accessToken == null) {
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/login');
+      return;
+    }
     final wsUrl =
-        'ws://${_apiBaseUrl.replaceFirst('http://', '')}/api/v1/chat/freetalk?session_id=$_sessionId';
+        'ws://${_apiBaseUrl.replaceFirst('http://', '')}/api/v1/chat/freetalk?session_id=$_sessionId&token=$accessToken';
     _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
     _channel!.stream.listen(

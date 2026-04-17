@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'pronunciation_summary_page.dart';
 
@@ -293,9 +294,19 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
 
     debugPrint("调用接口 evaluate");
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token');
+
+      if (accessToken == null) {
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+
       final uri = Uri.parse('$_apiBaseUrl/api/v1/pronunciation/evaluate');
       final req = http.MultipartRequest('POST', uri);
 
+      req.headers['Authorization'] = 'Bearer $accessToken';
       req.fields['session_id'] = _sessionId;
       req.fields['item_id'] = _itemIndex.toString();
       req.fields['audio_type'] = 'wav';
@@ -361,12 +372,24 @@ class _PronunciationPracticePageState extends State<PronunciationPracticePage> {
     if (_isRequesting) return;
     setState(() => _isRequesting = true);
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token');
+
+      if (accessToken == null) {
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+
       final uri = Uri.parse(
         '$_apiBaseUrl/api/v1/pronunciation/session/advance',
       );
       final res = await http.post(
         uri,
-        headers: const {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
         body: jsonEncode({
           'session_id': _sessionId,
           'current_item_id': _itemIndex,

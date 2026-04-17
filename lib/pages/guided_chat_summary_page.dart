@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ai_home_page.dart';
 
@@ -51,10 +52,22 @@ class _GuidedChatSummaryPageState extends State<GuidedChatSummaryPage> {
       _error = null;
     });
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token');
+
+      if (accessToken == null) {
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+
       final uri = Uri.parse(
         '$_apiBaseUrl/api/v1/scene/session/${widget.sessionId}/summary',
       );
-      final res = await http.get(uri);
+      final res = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
       final decoded = jsonDecode(res.body) as Map<String, dynamic>;
       if (decoded['code'] != 200) {
         throw Exception(decoded['message'] ?? '加载总结失败');

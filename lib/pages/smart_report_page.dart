@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SmartReportPage extends StatefulWidget {
   const SmartReportPage({super.key});
@@ -75,8 +76,20 @@ class _SmartReportPageState extends State<SmartReportPage> {
       _error = null;
     });
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token');
+
+      if (accessToken == null) {
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+
       final uri = Uri.parse('$_apiBaseUrl/api/v1/report/generate');
-      final res = await http.post(uri);
+      final res = await http.post(
+        uri,
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
       final decoded = jsonDecode(res.body) as Map<String, dynamic>;
       if (decoded['code'] != 200) {
         throw Exception(decoded['message'] ?? '生成报告失败');

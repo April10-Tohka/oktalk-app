@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'pronunciation_practice_page.dart';
 
@@ -32,10 +33,22 @@ class _TopicSelectPageState extends State<TopicSelectPage> {
 
   Future<void> _fetchTopics() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token');
+
+      if (accessToken == null) {
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+
       final uri = Uri.parse('$_apiBaseUrl/api/v1/pronunciation/units').replace(
         queryParameters: {'type': widget.type},
       );
-      final res = await http.get(uri);
+      final res = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
       final decoded = jsonDecode(res.body) as Map<String, dynamic>;
       if (decoded['code'] != 200) {
         throw Exception(decoded['message'] ?? '加载单元列表失败');
@@ -66,10 +79,22 @@ class _TopicSelectPageState extends State<TopicSelectPage> {
 
     setState(() => _startingUnitId = unitId);
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token');
+
+      if (accessToken == null) {
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+
       final uri = Uri.parse('$_apiBaseUrl/api/v1/pronunciation/session/start');
       final res = await http.post(
         uri,
-        headers: const {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
         body: jsonEncode({'unit_id': unitId}),
       );
 

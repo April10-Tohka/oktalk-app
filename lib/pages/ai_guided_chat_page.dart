@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'guided_chat_summary_page.dart';
 
@@ -110,10 +111,23 @@ class _AiGuidedChatPageState extends State<AiGuidedChatPage> {
       _messages.clear();
     });
     try {
+      // 1. 获取本地存储的 Token
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token');
+
+      if (accessToken == null) {
+        // 没有 token，跳转到登录页
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
       final uri = Uri.parse(
         '$_apiBaseUrl/api/v1/scene/session/$_sessionId/history',
       );
-      final res = await http.get(uri);
+      final res = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $accessToken '},
+      );
       final decoded = jsonDecode(res.body) as Map<String, dynamic>;
       if (decoded['code'] != 200) {
         throw Exception(decoded['message'] ?? '加载历史失败');

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'tokens.dart';
 
@@ -39,11 +40,25 @@ class _FrameComponentState extends State<FrameComponent> {
     }
 
     try {
+      // 1. 获取本地存储的 Token
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token');
+
+      if (accessToken == null) {
+        // 没有 token，跳转到登录页
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+
       // 发送请求，包含 avatar_url
       final uri = Uri.parse('$_apiBaseUrl/api/v1/user/profile');
       final response = await http.put(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken ',
+        },
         body: jsonEncode({
           'gender': selectedGender,
           'username': username,

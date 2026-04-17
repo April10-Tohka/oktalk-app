@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ai_guided_chat_page.dart';
 
@@ -30,8 +31,20 @@ class _ScenceSelectPageState extends State<ScenceSelectPage> {
 
   Future<void> _fetchScenes() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token');
+
+      if (accessToken == null) {
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+
       final uri = Uri.parse('$_apiBaseUrl/api/v1/scene/list');
-      final res = await http.get(uri);
+      final res = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
       final decoded = jsonDecode(res.body) as Map<String, dynamic>;
       if (decoded['code'] != 200) {
         throw Exception(decoded['message'] ?? '加载场景失败');
@@ -62,10 +75,22 @@ class _ScenceSelectPageState extends State<ScenceSelectPage> {
     if (_startingSceneId != null) return;
     setState(() => _startingSceneId = sceneId);
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token');
+
+      if (accessToken == null) {
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+
       final uri = Uri.parse('$_apiBaseUrl/api/v1/scene/session/start');
       final res = await http.post(
         uri,
-        headers: const {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
         body: jsonEncode({'scene_id': sceneId}),
       );
       final decoded = jsonDecode(res.body) as Map<String, dynamic>;
